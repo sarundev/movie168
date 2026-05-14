@@ -117,7 +117,7 @@ export default function Navbar() {
               >
                 <a
                   href={item.href}
-                  className="flex items-center gap-1 px-3 py-8 text-3xl font-extrabold space-x-2.5 space-y-1.5 whitespace-nowrap transition-colors rounded"
+                  className="flex items-center gap-1 px-3 py-8 text-xl font-extrabold space-x-2.5 space-y-1.5 whitespace-nowrap transition-colors rounded"
                
                   style={{ color: active ? "#e8c84a" : "#d1d1d1", fontFamily:'fangsong' }}
                   onMouseEnter={(e) => {
