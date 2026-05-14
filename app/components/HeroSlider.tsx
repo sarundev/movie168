@@ -5,6 +5,7 @@ import { featuredMovies } from "../data/movies";
 
 const GAP = 16;
 const PEEK_RATIO = 0.07;
+const MOBILE_BREAKPOINT = 640;
 
 export default function HeroSlider() {
   const [current, setCurrent] = useState(0);
@@ -21,11 +22,13 @@ export default function HeroSlider() {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  const peek = containerWidth ? Math.min(90, containerWidth * PEEK_RATIO) : 70;
+  const isMobile = containerWidth > 0 && containerWidth < MOBILE_BREAKPOINT;
+  const visibleCards = isMobile ? 1 : 3;
+  const peek = containerWidth ? Math.min(isMobile ? 28 : 90, containerWidth * PEEK_RATIO) : 70;
   const cardWidth = containerWidth
-    ? Math.floor((containerWidth - peek * 2 - GAP * 2) / 3)
+    ? Math.floor((containerWidth - peek * 2 - GAP * (visibleCards - 1)) / visibleCards)
     : 300;
-  const cardHeight = Math.round(cardWidth * 0.62);
+  const cardHeight = Math.round(cardWidth * (isMobile ? 0.56 : 0.62));
 
   const goTo = useCallback((idx: number) => setCurrent((idx + total) % total), [total]);
   const next = useCallback(() => goTo(current + 1), [current, goTo]);
@@ -45,6 +48,7 @@ export default function HeroSlider() {
 
   return (
     <section
+      className="grid grid-cols-12 sm:block"
       style={{
         width: "100%",
         background: "#0e0e14",
@@ -54,6 +58,7 @@ export default function HeroSlider() {
       {/* Cards track */}
       <div
         ref={containerRef}
+        className="col-span-12"
         style={{
           overflow: "hidden",
           paddingTop: "20px",
@@ -241,6 +246,7 @@ export default function HeroSlider() {
 
       {/* Navigation dots */}
       <div
+        className="col-span-12"
         style={{
           display: "flex",
           justifyContent: "center",
