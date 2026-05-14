@@ -1,0 +1,158 @@
+"use client";
+
+import type { Movie } from "../data/movies";
+
+const qualityColors: Record<string, string> = {
+  "4K": "#1d4ed8",
+  FHD: "#b45309",
+  HD: "#15803d",
+  CAM: "#6b7280",
+};
+
+const badgeColors: Record<string, string> = {
+  NEW: "#c9a835",
+  HOT: "#e50914",
+  TOP: "#7c3aed",
+};
+
+export default function MovieCard({ movie }: { movie: Movie }) {
+  const qColor = qualityColors[movie.quality] ?? qualityColors["HD"];
+
+  return (
+    <div className="group shrink-0 cursor-pointer" style={{ width: "290px" }}>
+      {/* Poster */}
+      <div
+        className="relative rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.04] group-hover:z-10"
+        style={{
+          width: "280px",
+          height: "400px",
+          background: movie.gradient,
+          border: "1px solid rgba(255,255,255,0.06)",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.55)",
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLDivElement).style.boxShadow =
+            "0 8px 32px rgba(201,168,53,0.3), 0 0 0 1.5px rgba(201,168,53,0.4)";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLDivElement).style.boxShadow =
+            "0 4px 16px rgba(0,0,0,0.55)";
+        }}
+      >
+        {/* Poster image */}
+        {movie.image && (
+          <img
+            src={movie.image}
+            alt={movie.title}
+            className="absolute inset-0 w-full h-full object-cover"
+            loading="lazy"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
+        )}
+
+        {/* Vignette */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.2) 45%, transparent 100%)",
+          }}
+        />
+
+        {/* Badge top-right */}
+        {movie.badge && (
+          <span
+            className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded tracking-widest"
+            style={{ background: badgeColors[movie.badge] ?? "#c9a835", color: "white" }}
+          >
+            {movie.badge}
+          </span>
+        )}
+
+        {/* Quality badge bottom-left */}
+        <div className="absolute bottom-2 left-2 flex items-center gap-1">
+          <span
+            className="text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider"
+            style={{ background: qColor, color: "white" }}
+          >
+            {movie.quality === "4K" ? "4K ULTRA HD" : movie.quality}
+          </span>
+        </div>
+
+        {/* Hover overlay */}
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-3.5 opacity-0 group-hover:opacity-100 transition-all duration-250"
+          style={{ background: "rgba(0,0,0,0.58)" }}
+        >
+          {/* Play button */}
+          <button
+            className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-110"
+            style={{
+              background: "rgba(201,168,53,0.94)",
+              boxShadow: "0 0 28px rgba(201,168,53,0.5)",
+            }}
+            aria-label={`Play ${movie.title}`}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#0d0d12">
+              <polygon points="5 3 19 12 5 21 5 3" />
+            </svg>
+          </button>
+
+          {/* Rating */}
+          <div className="flex items-center gap-1.5">
+            <svg width="13" height="13" fill="#c9a835" viewBox="0 0 20 20">
+              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+            </svg>
+            <span className="text-white text-sm font-bold">{movie.rating}</span>
+            <span className="text-zinc-400 text-xs">{movie.duration}</span>
+          </div>
+
+          {/* Genre chips */}
+          <div className="flex flex-wrap gap-1.5 justify-center px-3">
+            {movie.genres.slice(0, 2).map((g) => (
+              <span
+                key={g}
+                className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{
+                  background: "rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  color: "#ddd",
+                }}
+              >
+                {g}
+              </span>
+            ))}
+          </div>
+
+          {/* Add to list */}
+          <button
+            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
+            style={{
+              color: "#c9a835",
+              border: "1px solid rgba(201,168,53,0.45)",
+              background: "rgba(201,168,53,0.1)",
+            }}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            My List
+          </button>
+        </div>
+      </div>
+
+      {/* Title & year below poster */}
+      <div className="mt-2.5 px-0.5">
+        <p
+          className="text-sm font-semibold leading-snug line-clamp-1 transition-colors group-hover:text-amber-400"
+          style={{ color: "#e5e5e5" }}
+        >
+          {movie.title}
+        </p>
+        <p className="text-xs mt-0.5" style={{ color: "#777" }}>
+          {movie.year}
+        </p>
+      </div>
+    </div>
+  );
+}
