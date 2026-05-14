@@ -19,13 +19,13 @@ export default function MovieCard({ movie }: { movie: Movie }) {
   const qColor = qualityColors[movie.quality] ?? qualityColors["HD"];
 
   return (
-    <div className="group shrink-0 cursor-pointer" style={{ width: "290px" }}>
+    <div className="group shrink-0 cursor-pointer" style={{ width: "230px" }}>
       {/* Poster */}
       <div
         className="relative rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.04] group-hover:z-10"
         style={{
-          width: "280px",
-          height: "400px",
+          width: "230px",
+          height: "330px",
           background: movie.gradient,
           border: "1px solid rgba(255,255,255,0.06)",
           boxShadow: "0 4px 16px rgba(0,0,0,0.55)",
@@ -75,7 +75,7 @@ export default function MovieCard({ movie }: { movie: Movie }) {
             className="text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider"
             style={{ background: qColor, color: "white" }}
           >
-            {movie.quality === "4K" ? "4K ULTRA HD" : movie.quality}
+            {movie.quality === "4K" ? "4K ULTRA HD" : movie.quality === "FHD" ? "FHD 1080P" : movie.quality === "HD" ? "HD 720P" : movie.quality}
           </span>
         </div>
 

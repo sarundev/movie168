@@ -17,6 +17,22 @@ const SORTS     = [
 const qualityBg: Record<string, string> = { "4K":"#1d4ed8", FHD:"#b45309", HD:"#15803d" };
 const badgeBg:   Record<string, string> = { NEW:"#c9a835", HOT:"#e50914", TOP:"#7c3aed", AWARD:"#065f46" };
 
+function qualityInfo(q: string): { label: string; sub: string } {
+  if (q === "4K")  return { label: "4K",  sub: "ULTRA HD" };
+  if (q === "FHD") return { label: "FHD", sub: "1080P" };
+  if (q === "HD")  return { label: "HD",  sub: "720P" };
+  return { label: q, sub: "" };
+}
+
+function fmtDate(releaseDate?: string, year?: number): string {
+  if (releaseDate) {
+    const d = new Date(releaseDate + "T00:00:00");
+    const m = ["Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."];
+    return `${m[d.getMonth()]} ${String(d.getDate()).padStart(2,"0")}, ${d.getFullYear()}`;
+  }
+  return year ? String(year) : "";
+}
+
 export default function MoviesPage() {
   const [genre,   setGenre]   = useState("All");
   const [quality, setQuality] = useState<"All"|"4K"|"FHD"|"HD">("All");
@@ -61,8 +77,9 @@ export default function MoviesPage() {
           </div>
 
           {/* Search + sort */}
-          <div className="flex items-center gap-3">
-            <div className="relative">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+            {/* Search — full width on mobile */}
+            <div className="relative w-full sm:w-48">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
@@ -71,29 +88,31 @@ export default function MoviesPage() {
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search movies..."
-                className="pl-9 pr-4 py-2 rounded-lg text-sm text-white placeholder-zinc-600 outline-none w-48"
+                className="pl-9 pr-4 py-2 rounded-lg text-sm text-white placeholder-zinc-600 outline-none w-full"
                 style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)" }}
               />
             </div>
-            <select
-              value={sort}
-              onChange={e => setSort(e.target.value)}
-              className="px-3 py-2 rounded-lg text-sm outline-none"
-              style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"#aaa" }}
-            >
-              {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-            </select>
-            {/* Mobile filter toggle */}
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="lg:hidden flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium"
-              style={{ background:"rgba(201,168,53,0.1)", border:"1px solid rgba(201,168,53,0.3)", color:"#c9a835" }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="4" x2="20" y1="6" y2="6"/><line x1="8" x2="20" y1="12" y2="12"/><line x1="12" x2="20" y1="18" y2="18"/>
-              </svg>
-              Filter
-            </button>
+            {/* Sort + Filter on same row */}
+            <div className="flex items-center gap-2">
+              <select
+                value={sort}
+                onChange={e => setSort(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"#aaa" }}
+              >
+                {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium"
+                style={{ background:"rgba(201,168,53,0.1)", border:"1px solid rgba(201,168,53,0.3)", color:"#c9a835" }}
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="4" x2="20" y1="6" y2="6"/><line x1="8" x2="20" y1="12" y2="12"/><line x1="12" x2="20" y1="18" y2="18"/>
+                </svg>
+                Filter
+              </button>
+            </div>
           </div>
         </div>
 
@@ -122,17 +141,35 @@ export default function MoviesPage() {
         )}
       </div>
 
-      <div className="flex px-4 sm:px-6 lg:px-12 py-8 gap-8">
+      <div className="flex flex-col lg:flex-row px-4 sm:px-6 lg:px-12 py-8 gap-6 lg:gap-8">
 
         {/* Sidebar */}
         <aside
-          className={`${sidebarOpen ? "block" : "hidden"} lg:block shrink-0`}
-          style={{ width: "200px" }}
+          className={`${sidebarOpen ? "block" : "hidden"} lg:block lg:shrink-0`}
+          style={{ width: "auto" }}
         >
           {/* Genre filter */}
-          <div className="mb-6">
-            <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color:"#c9a835" }}>Genre</h3>
-            <div className="flex flex-col gap-1">
+          <div className="mb-4 lg:mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-2 lg:mb-3" style={{ color:"#c9a835" }}>Genre</h3>
+            {/* Mobile: horizontal wrap chips */}
+            <div className="flex flex-wrap gap-1.5 lg:hidden">
+              {GENRES.map(g => (
+                <button
+                  key={g}
+                  onClick={() => setGenre(g)}
+                  className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+                  style={{
+                    background: genre === g ? "rgba(201,168,53,0.18)" : "rgba(255,255,255,0.06)",
+                    color: genre === g ? "#c9a835" : "#888",
+                    border: genre === g ? "1px solid rgba(201,168,53,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+            {/* Desktop: vertical list */}
+            <div className="hidden lg:flex flex-col gap-1">
               {GENRES.map(g => (
                 <button
                   key={g}
@@ -151,9 +188,27 @@ export default function MoviesPage() {
           </div>
 
           {/* Quality filter */}
-          <div className="mb-6">
-            <h3 className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color:"#c9a835" }}>Quality</h3>
-            <div className="flex flex-col gap-1">
+          <div className="mb-4 lg:mb-6">
+            <h3 className="text-xs font-bold uppercase tracking-widest mb-2 lg:mb-3" style={{ color:"#c9a835" }}>Quality</h3>
+            {/* Mobile: horizontal chips */}
+            <div className="flex flex-wrap gap-1.5 lg:hidden">
+              {QUALITIES.map(q => (
+                <button
+                  key={q}
+                  onClick={() => setQuality(q)}
+                  className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+                  style={{
+                    background: quality === q ? "rgba(201,168,53,0.18)" : "rgba(255,255,255,0.06)",
+                    color: quality === q ? "#c9a835" : "#888",
+                    border: quality === q ? "1px solid rgba(201,168,53,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  {q === "All" ? "All" : q}
+                </button>
+              ))}
+            </div>
+            {/* Desktop: vertical list */}
+            <div className="hidden lg:flex flex-col gap-1">
               {QUALITIES.map(q => (
                 <button
                   key={q}
@@ -185,68 +240,97 @@ export default function MoviesPage() {
               </button>
             </div>
           ) : (
-            <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(185px, 1fr))" }}>
+            <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2 sm:gap-4">
               {filtered.map(movie => {
                 const qColor = qualityBg[movie.quality] ?? "#15803d";
+                const { label: qLabel, sub: qSub } = qualityInfo(movie.quality);
+                const dateText = fmtDate(movie.releaseDate, movie.year);
                 return (
-                  <a
-                    key={movie.id}
-                    href={`/movie/${movie.id}`}
-                    className="group cursor-pointer"
-                  >
+                  <a key={movie.id} href={`/movie/${movie.id}`} className="group cursor-pointer">
                     {/* Poster */}
                     <div
-                      className="relative rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.04]"
+                      className="relative rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.03]"
                       style={{
-                        width: "100%",
                         aspectRatio: "2/3",
                         background: movie.gradient,
                         border: "1px solid rgba(255,255,255,0.06)",
-                        boxShadow: "0 4px 14px rgba(0,0,0,0.5)",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.5)",
                       }}
                       onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 28px rgba(201,168,53,0.28), 0 0 0 1.5px rgba(201,168,53,0.4)"; }}
-                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 14px rgba(0,0,0,0.5)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 10px rgba(0,0,0,0.5)"; }}
                     >
                       {movie.image && (
-                        <img src={movie.image} alt={movie.title}
-                          className="absolute inset-0 w-full h-full object-cover" loading="lazy"
-                          onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        <img
+                          src={movie.image}
+                          alt={movie.title}
+                          className="absolute inset-0 w-full h-full object-cover object-top"
+                          loading="lazy"
+                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                        />
                       )}
-                      <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.15) 50%,transparent 100%)" }} />
+
+                      {/* Vignette */}
+                      <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 45%)" }} />
+
+                      {/* Logo watermark — top left */}
+                      <div
+                        className="absolute top-1.5 left-1.5 font-black rounded leading-none"
+                        style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background:"rgba(0,0,0,0.55)", color:"#c9a835" }}
+                      >
+                        168
+                      </div>
+
+                      {/* Badge — top right */}
                       {movie.badge && (
-                        <span className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded tracking-widest"
-                          style={{ background: badgeBg[movie.badge] ?? "#c9a835", color:"white" }}>
+                        <span
+                          className="absolute top-1.5 right-1.5 font-black rounded tracking-widest"
+                          style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background: badgeBg[movie.badge] ?? "#c9a835", color:"white" }}
+                        >
                           {movie.badge}
                         </span>
                       )}
-                      <span className="absolute bottom-2 left-2 text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider"
-                        style={{ background: qColor, color:"white" }}>
-                        {movie.quality === "4K" ? "4K" : movie.quality}
-                      </span>
-                      {/* Hover overlay */}
+
+                      {/* Two-tone quality badge — bottom left */}
+                      <div className="absolute bottom-1.5 left-1.5 flex items-center rounded overflow-hidden">
+                        <span
+                          className="font-black"
+                          style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background: qColor, color:"white" }}
+                        >
+                          {qLabel}
+                        </span>
+                        {qSub && (
+                          <span
+                            className="font-black"
+                            style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background:"rgba(0,0,0,0.82)", color:"#ccc" }}
+                          >
+                            {qSub}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Hover play */}
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        style={{ background:"rgba(0,0,0,0.55)" }}>
-                        <div className="w-13 h-13 rounded-full flex items-center justify-center"
+                        style={{ background:"rgba(0,0,0,0.5)" }}>
+                        <div className="w-11 h-11 rounded-full flex items-center justify-center"
                           style={{ background:"rgba(201,168,53,0.9)", boxShadow:"0 0 24px rgba(201,168,53,0.5)" }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="#0d0d12">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d0d12">
                             <polygon points="5 3 19 12 5 21 5 3"/>
                           </svg>
                         </div>
                       </div>
                     </div>
+
                     {/* Info below */}
-                    <div className="mt-2 px-0.5">
-                      <p className="text-sm font-semibold line-clamp-1 transition-colors group-hover:text-amber-400" style={{ color:"#e5e5e5" }}>
+                    <div className="mt-1.5 px-0.5">
+                      <p
+                        className="font-semibold line-clamp-2 leading-tight transition-colors group-hover:text-amber-400"
+                        style={{ color:"#e5e5e5", fontSize:"clamp(10px,2.8vw,13px)" }}
+                      >
                         {movie.title}
                       </p>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-xs" style={{ color:"#666" }}>{movie.year}</span>
-                        <span className="text-xs" style={{ color:"#444" }}>•</span>
-                        <svg width="10" height="10" fill="#c9a835" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                        </svg>
-                        <span className="text-xs font-semibold" style={{ color:"#c9a835" }}>{movie.rating}</span>
-                      </div>
+                      <p className="mt-0.5" style={{ color:"#777", fontSize:"clamp(9px,2.3vw,11px)" }}>
+                        {dateText}
+                      </p>
                     </div>
                   </a>
                 );

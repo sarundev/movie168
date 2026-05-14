@@ -36,17 +36,84 @@ export default async function MovieDetailPage({
       <Navbar />
 
       {/* ── Hero backdrop ── */}
-      <div className="relative w-full overflow-hidden" style={{ height: "70vh", minHeight: "500px" }}>
-        {/* Background */}
+      <div className="relative w-full overflow-hidden" style={{ height: "72vh", minHeight: "520px" }}>
+        {/* Gradient base */}
         <div className="absolute inset-0" style={{ background: movie.gradient }} />
-        <div className="absolute inset-0 opacity-[0.07]"
-          style={{ backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")" }} />
+
+        {/* Backdrop image */}
+        {movie.image && (
+          <img
+            src={movie.image}
+            alt={movie.title}
+            className="absolute inset-0 w-full h-full object-cover object-top"
+            style={{ opacity: 0.55 }}
+          />
+        )}
+
         {/* Overlays */}
-        <div className="absolute inset-0" style={{ background:"linear-gradient(to top, #0d0d12 0%, rgba(13,13,18,0.6) 50%, rgba(13,13,18,0.2) 100%)" }} />
-        <div className="absolute inset-0" style={{ background:"linear-gradient(to right, rgba(13,13,18,0.9) 0%, rgba(13,13,18,0.4) 55%, transparent 80%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to top, #0d0d12 0%, rgba(13,13,18,0.6) 50%, rgba(13,13,18,0.1) 100%)" }} />
+        <div className="absolute inset-0" style={{ background: "linear-gradient(to right, rgba(13,13,18,0.95) 0%, rgba(13,13,18,0.5) 55%, transparent 80%)" }} />
+
+        {/* Floating poster — mobile (top-right) */}
+        {movie.image && (
+          <div className="lg:hidden absolute top-20 right-4 z-10">
+            <div
+              className="relative rounded-xl overflow-hidden"
+              style={{
+                width: "110px",
+                aspectRatio: "2/3",
+                background: movie.gradient,
+                boxShadow: "0 8px 32px rgba(0,0,0,0.8), 0 0 0 1px rgba(201,168,53,0.3)",
+              }}
+            >
+              <img
+                src={movie.image}
+                alt={movie.title}
+                className="absolute inset-0 w-full h-full object-cover object-top"
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)" }} />
+              <span
+                className="absolute bottom-1.5 left-1.5 text-[8px] font-black px-1 py-0.5 rounded tracking-wide"
+                style={{ background: qColor, color: "white" }}
+              >
+                {movie.quality === "4K" ? "4K" : movie.quality}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Floating poster — desktop (right) */}
+        {movie.image && (
+          <div className="hidden lg:block absolute right-14 bottom-10 z-10">
+            <div
+              className="relative rounded-2xl overflow-hidden"
+              style={{
+                width: "240px",
+                aspectRatio: "2/3",
+                background: movie.gradient,
+                boxShadow: "0 24px 64px rgba(0,0,0,0.85), 0 0 0 1.5px rgba(201,168,53,0.3)",
+              }}
+            >
+              <img
+                src={movie.image}
+                alt={movie.title}
+                className="absolute inset-0 w-full h-full object-cover object-top"
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
+              <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 50%)" }} />
+              <span
+                className="absolute bottom-2.5 left-2.5 text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider"
+                style={{ background: qColor, color: "white" }}
+              >
+                {movie.quality === "4K" ? "4K ULTRA HD" : movie.quality}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Content */}
-        <div className="absolute bottom-0 left-0 px-4 sm:px-6 lg:px-14 pb-10 max-w-3xl">
+        <div className="absolute bottom-0 left-0 pl-4 pr-32 sm:pl-6 sm:pr-36 lg:pl-14 lg:pr-4 pb-10 max-w-3xl">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-xs mb-4" style={{ color:"#666" }}>
             <a href="/" className="hover:text-amber-400 transition-colors" style={{ color:"#888" }}>Home</a>
