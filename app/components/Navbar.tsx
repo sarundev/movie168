@@ -99,7 +99,7 @@ export default function Navbar() {
           {/* Diamond icon */}
         
           <div className="leading-none">
-            <span className="font-black text-lg tracking-wider" style={{ color: "#e8c84a" }}>168</span>
+            <span className="font-black text-lg tracking-wider" style={{ color: "#e8c84a" }}>168KH</span>
             <span className="font-black text-lg tracking-wider text-white ml-1">NET.</span>
           </div>
         </a>
