@@ -144,15 +144,25 @@ export default function MovieCard({ movie }: { movie: Movie }) {
       {/* Title & year below poster */}
       <div className="mt-2.5 px-0.5">
         <p
-          className="text-sm font-semibold leading-snug line-clamp-1 transition-colors group-hover:text-amber-400"
+          className="text-md font-semibold leading-snug line-clamp-1 transition-colors group-hover:text-amber-400"
           style={{ color: "#e5e5e5" }}
         >
           {movie.title}
         </p>
-        <p className="text-xs mt-0.5" style={{ color: "#777" }}>
+        <div className="relative flex gap-2 pt-2">
+
+      
+        <p className="text-white text-xs bg-gray-800 px-2 py-0.5 rounded-sm flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           {movie.year}
         </p>
+        <p className="text-white text-xs bg-gray-800 px-2 py-0.5 rounded-sm flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          {movie.duration}
+        </p>
+           </div>
       </div>
+
     </div>
   );
 }

@@ -7,6 +7,7 @@ export interface Movie {
   releaseDate?: string;
   rating: number;
   duration: string;
+
   genres: string[];
   gradient: string;
   quality: "FHD" | "4K" | "HD" | "CAM";

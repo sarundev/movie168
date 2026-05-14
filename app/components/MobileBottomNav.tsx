@@ -33,19 +33,19 @@ const ProfileIcon = () => (
 );
 
 /* Center: search + play merged icon */
-const SearchPlayIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 28 28" fill="none">
-    <circle cx="11.5" cy="11.5" r="7.5" stroke="white" strokeWidth="2.2" />
-    <path d="M17.5 17.5 25 25" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-    <polygon points="9,8.5 9,14.5 14.5,11.5" fill="white" />
-  </svg>
-);
+// const SearchPlayIcon = () => (
+//   <svg width="14" height="14" viewBox="0 0 28 28" fill="none">
+//     <circle cx="11.5" cy="11.5" r="7.5" stroke="white" strokeWidth="2.2" />
+//     <path d="M17.5 17.5 25 25" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+//     <polygon points="9,8.5 9,14.5 14.5,11.5" fill="white" />
+//   </svg>
+// );
 
 /* ─── Nav data ───────────────────────────────────────── */
 const tabs = [
   { label: "ទំព័រដើម",  href: "/",       icon: <HomeIcon />,    isCenter: false },
   { label: "រឿងខ្លី",   href: "/movies",  icon: <MovieIcon />,   isCenter: false },
-  { label: "ស្វែងរក",  href: "/search",  icon: null,            isCenter: true  },
+  // { label: "ស្វែងរក",  href: "/search",  icon: null,            isCenter: true  },
   { label: "រឿងភាគ",   href: "/series",  icon: <SeriesIcon />,  isCenter: false },
   { label: "គណនី",     href: "/profile", icon: <ProfileIcon />, isCenter: false },
 ] as const;
@@ -90,52 +90,52 @@ export default function MobileBottomNav() {
             const active = isActive(tab.href);
 
             /* ── Centre search button ── */
-            if (tab.isCenter) {
-              return (
-                <a
-                  key={tab.label}
-                  href={tab.href}
-                  aria-label={tab.label}
-                  className="mnav-center-btn  flex flex-col items-center flex-1"
+            // if (tab.isCenter) {
+            //   return (
+            //     <a
+            //       key={tab.label}
+            //       href={tab.href}
+            //       aria-label={tab.label}
+            //       className="mnav-center-btn  flex flex-col items-center flex-1"
                  
-                >
-                  {/* Floating circle */}
-                  <div
-                    style={{
-                      width: "40px",
-                      height: "40px",
-                      borderRadius: "50%",
-                      background: "linear-gradient(145deg, #ff2828, #b80000)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      /* Outer ring so it looks detached from the bar */
-                      outline: "3px solid rgba(10,10,13,0.96)",
-                      outlineOffset: "2px",
-                      boxShadow:
-                        "0 6px 24px rgba(220,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08) inset",
-                    }}
+            //     >
+            //       {/* Floating circle */}
+            //       <div
+            //         style={{
+            //           width: "40px",
+            //           height: "40px",
+            //           borderRadius: "50%",
+            //           background: "linear-gradient(145deg, #ff2828, #b80000)",
+            //           display: "flex",
+            //           alignItems: "center",
+            //           justifyContent: "center",
+            //           /* Outer ring so it looks detached from the bar */
+            //           outline: "3px solid rgba(10,10,13,0.96)",
+            //           outlineOffset: "2px",
+            //           boxShadow:
+            //             "0 6px 24px rgba(220,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08) inset",
+            //         }}
 
-                  >
-                    <SearchPlayIcon />
-                  </div>
+            //       >
+            //         <SearchPlayIcon />
+            //       </div>
 
-                  {/* Label */}
-                  <span
-                    style={{
-                      marginTop: "6px",
-                      fontSize: "10px",
-                      fontFamily: "'Battambang', 'Khmer', serif",
-                      color: active ? "#ff4040" : "#555",
-                      letterSpacing: "0.02em",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {tab.label}
-                  </span>
-                </a>
-              );
-            }
+            //       {/* Label */}
+            //       <span
+            //         style={{
+            //           marginTop: "6px",
+            //           fontSize: "10px",
+            //           fontFamily: "'Battambang', 'Khmer', serif",
+            //           color: active ? "#ff4040" : "#555",
+            //           letterSpacing: "0.02em",
+            //           lineHeight: 1,
+            //         }}
+            //       >
+            //         {tab.label}
+            //       </span>
+            //     </a>
+            //   );
+            // }
 
             /* ── Regular tab ── */
             return (

@@ -40,7 +40,7 @@ export default function SeriesPage() {
       <Navbar />
 
       {/* Page header */}
-      <div className="px-4 sm:px-6 lg:px-12 pt-20 pb-6" style={{ borderBottom:"1px solid rgba(201,168,53,0.1)" }}>
+      <div className="px-4 mt-8 sm:px-6 lg:px-12 pt-20 pb-6" style={{ borderBottom:"1px solid rgba(201,168,53,0.1)" }}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs mb-1" style={{ color:"#666" }}>
@@ -97,8 +97,8 @@ export default function SeriesPage() {
         </aside>
 
         {/* Series grid */}
-        <div className="flex-1 min-w-0">
-          <div className="grid gap-5" style={{ gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))" }}>
+        <div className="flex-1 min-w-0 ">
+          <div className="grid gap-5 grid-cols-3 md:grid-cols-8" >
             {filtered.map(series => {
               const qColor = qualityBg[series.quality] ?? "#15803d";
               return (
@@ -117,10 +117,10 @@ export default function SeriesPage() {
                     )}
                     <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.78) 0%,transparent 55%)" }} />
                     {/* Status chip */}
-                    <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    {/* <span className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
                       style={{ background: series.status==="Ongoing"?"rgba(34,197,94,0.2)":"rgba(99,102,241,0.2)", color:series.status==="Ongoing"?"#4ade80":"#a5b4fc", border:`1px solid ${series.status==="Ongoing"?"rgba(74,222,128,0.3)":"rgba(165,180,252,0.3)"}` }}>
                       {series.status}
-                    </span>
+                    </span> */}
                     {series.badge && (
                       <span className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded tracking-widest"
                         style={{ background: badgeBg[series.badge] ?? "#c9a835", color:"white" }}>
