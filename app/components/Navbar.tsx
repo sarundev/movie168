@@ -99,8 +99,8 @@ export default function Navbar() {
           {/* Diamond icon */}
         
           <div className="leading-none">
-            <span className="font-black text-3xl tracking-wider" style={{ color: "#e8c84a" }}>168</span>
-            <span className="font-black text-3xl tracking-wider text-white ml-1">NET.</span>
+            <span className="font-black text-lg tracking-wider" style={{ color: "#e8c84a" }}>168</span>
+            <span className="font-black text-lg tracking-wider text-white ml-1">NET.</span>
           </div>
         </a>
 
@@ -117,7 +117,7 @@ export default function Navbar() {
               >
                 <a
                   href={item.href}
-                  className="flex items-center gap-1 px-3 py-8 text-xl font-extrabold space-x-2.5 space-y-1.5 whitespace-nowrap transition-colors rounded"
+                  className="flex items-center gap-1 px-3 py-8 text-lg font-extrabold space-x-2.5 space-y-1.5 whitespace-nowrap transition-colors rounded"
                
                   style={{ color: active ? "#e8c84a" : "#d1d1d1", fontFamily:'fangsong' }}
                   onMouseEnter={(e) => {
