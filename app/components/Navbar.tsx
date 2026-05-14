@@ -100,7 +100,7 @@ export default function Navbar() {
         
           <div className="leading-none">
             <span className="font-black text-3xl tracking-wider" style={{ color: "#e8c84a" }}>168</span>
-            <span className="font-black text-3xl tracking-wider text-white ml-1">NET</span>
+            <span className="font-black text-3xl tracking-wider text-white ml-1">NET.</span>
           </div>
         </a>
 
