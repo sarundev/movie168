@@ -4,7 +4,6 @@ import { useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 
 const navItems = [
-  { label: "បញ្ចូលទឹកប្រាក់", href: "/deposit" },
   {
     label: "កាលវិភាគ & អ្វៀបអស្ប្រ",
     href: "/schedule",
@@ -203,6 +202,7 @@ export default function Navbar() {
                 }
               }}
             />
+            
             <button
               className="px-3 py-1.5 transition-colors"
               style={{ color: "#888", borderLeft: "1px solid #2e2e2e" }}
@@ -219,6 +219,13 @@ export default function Navbar() {
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
             </button>
+
+            
+          </div>
+          <div className="relative bg-amber-500 py-1.5 px-3 rounded-md">
+          <button>
+            <a href="/deposit">បញ្ជូលទឹកប្រាក់</a>
+          </button>
           </div>
 
           {/* User icon */}

@@ -16,6 +16,8 @@ const USER = {
   planExpiry: "31 ធ្នូ 2026",
   totalWatched: 142,
   favoriteGenre: "Action",
+  totalMoney: 45,
+  totalBuyMovie: 8,
 };
 
 const WATCH_PROGRESS: Record<number, number> = {
@@ -279,11 +281,56 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          {/* Stats */}
+          {/* Stats row 1 */}
           <div className="grid grid-cols-3 gap-3 mt-6">
             <StatCard value={USER.totalWatched} label="រឿងបានមើល" />
             <StatCard value={USER.favoriteGenre} label="ប្រភេទពេញចិត្ត" />
             <StatCard value="Gold" label="កម្រិតសមាជិក" />
+          </div>
+
+          {/* Stats row 2 — wallet & purchases */}
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            {/* Total Money */}
+            <div className="relative flex items-center gap-4 px-5 py-4 rounded-xl overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg,rgba(201,168,53,0.13) 0%,rgba(139,105,20,0.07) 100%)",
+                border: "1px solid rgba(201,168,53,0.25)",
+              }}>
+              <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle,rgba(201,168,53,0.18) 0%,transparent 70%)" }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(201,168,53,0.15)", border: "1px solid rgba(201,168,53,0.3)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 12V7H4v13h16v-5"/><path d="M20 12a2 2 0 0 0-4 0 2 2 0 0 0 4 0Z"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold mb-0.5" style={{ color: "#888" }}>ទឹកប្រាក់សរុប</p>
+                <p className="text-2xl font-black leading-none" style={{ color: "#c9a835" }}>${USER.totalMoney}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: "#666" }}>{(USER.totalMoney * 4000).toLocaleString()} ៛</p>
+              </div>
+            </div>
+
+            {/* Total Buy Movie */}
+            <div className="relative flex items-center gap-4 px-5 py-4 rounded-xl overflow-hidden"
+              style={{
+                background: "linear-gradient(135deg,rgba(168,85,247,0.12) 0%,rgba(109,40,217,0.07) 100%)",
+                border: "1px solid rgba(168,85,247,0.25)",
+              }}>
+              <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full pointer-events-none"
+                style={{ background: "radial-gradient(circle,rgba(168,85,247,0.18) 0%,transparent 70%)" }} />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
+                style={{ background: "rgba(168,85,247,0.15)", border: "1px solid rgba(168,85,247,0.3)" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="2.18"/><path d="M7 2v20M17 2v20M2 12h20M2 7h5M2 17h5M17 17h5M17 7h5"/>
+                </svg>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold mb-0.5" style={{ color: "#888" }}>ចំនួនរឿងទិញ</p>
+                <p className="text-2xl font-black leading-none" style={{ color: "#a855f7" }}>{USER.totalBuyMovie}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: "#666" }}>រឿង</p>
+              </div>
+            </div>
           </div>
         </div>
 
