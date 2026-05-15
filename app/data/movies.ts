@@ -2,12 +2,12 @@ const T = "https://image.tmdb.org/t/p/w500";
 
 export interface Movie {
   id: number;
+  slug?: string;
   title: string;
   year: number;
   releaseDate?: string;
   rating: number;
   duration: string;
-
   genres: string[];
   gradient: string;
   quality: "FHD" | "4K" | "HD" | "CAM";

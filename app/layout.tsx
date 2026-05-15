@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import "./globals.css";
 import MobileBottomNav from "./components/MobileBottomNav";
+import { AuthProvider } from "./context/AuthContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,10 +23,12 @@ export default function RootLayout({
     <html lang="en" className={`${geistSans.variable} h-full`}>
       <body className="bg-[#09090b] text-white min-h-full antialiased" suppressHydrationWarning>
         {/* Extra bottom padding on mobile so content clears the nav bar */}
-        <div className="lg:pb-0 pb-20">
-          {children}
-        </div>
-        <MobileBottomNav />
+        <AuthProvider>
+          <div className="lg:pb-0 pb-20">
+            {children}
+          </div>
+          <MobileBottomNav />
+        </AuthProvider>
       </body>
     </html>
   );

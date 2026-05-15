@@ -2,6 +2,9 @@
 
 import { useState, useRef } from "react";
 import { usePathname } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
+import { Kantumruy_Pro } from "next/font/google";
+import { Metadata } from "next";
 
 const navItems = [
   {
@@ -68,12 +71,29 @@ const navItems = [
   },
 ];
 
+const kantumruy = Kantumruy_Pro({
+  subsets: ["khmer"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-khmer",
+});
+
+export const metadata: Metadata = {
+  title: "Khmer Website",
+  description: "Khmer font example",
+};
+
 export default function Navbar() {
   const pathname = usePathname();
+  const { user, logout, loading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const dropdownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userMenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const openUserMenu  = () => { if (userMenuTimer.current) clearTimeout(userMenuTimer.current); setUserMenuOpen(true); };
+  const closeUserMenu = () => { userMenuTimer.current = setTimeout(() => setUserMenuOpen(false), 150); };
 
   const openDD = (label: string) => {
     if (dropdownTimer.current) clearTimeout(dropdownTimer.current);
@@ -116,9 +136,10 @@ export default function Navbar() {
               >
                 <a
                   href={item.href}
-                  className="flex items-center gap-1 px-3 py-8 text-lg font-extrabold space-x-2.5 space-y-1.5 whitespace-nowrap transition-colors rounded"
+                  className="flex items-center gap-1 px-3 py-8 text-lg  space-x-2.5 space-y-1.5 whitespace-nowrap transition-colors rounded"
                
-                  style={{ color: active ? "#e8c84a" : "#d1d1d1", fontFamily:'fangsong' }}
+                  style={{ color: active ? "#e8c84a" : "#d1d1d1",fontFamily: "'Kantumruy Pro', 'Noto Sans Khmer', sans-serif",
+  fontWeight: 900,}}
                   onMouseEnter={(e) => {
                     if (!active) e.currentTarget.style.color = "#fff";
                   }}
@@ -222,33 +243,110 @@ export default function Navbar() {
 
             
           </div>
-          <div className="relative bg-amber-500 py-1.5 px-3 rounded-md">
+          {/* <div className="relative bg-amber-500 py-1.5 px-3 rounded-md">
           <button>
             <a href="/deposit">បញ្ជូលទឹកប្រាក់</a>
           </button>
-          </div>
+          </div> */}
 
-          {/* User icon */}
-          <div className="relative hidden md:block">
-          <a
-            href="/profile"
-            className="w-8 h-8  rounded-full flex items-center justify-center transition-colors"
-            style={{ background: "#1c1c1c", border: "1px solid #2e2e2e", color: "#ccc" }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "#e8c84a";
-              (e.currentTarget as HTMLElement).style.color = "#e8c84a";
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLElement).style.borderColor = "#2e2e2e";
-              (e.currentTarget as HTMLElement).style.color = "#ccc";
-            }}
-            aria-label="User profile"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </a>
+          {/* User area — desktop */}
+          <div className="relative hidden md:flex items-center">
+            {user ? (
+              /* ── Logged-in: avatar + dropdown ── */
+              <div
+                className="relative"
+                onMouseEnter={openUserMenu}
+                onMouseLeave={closeUserMenu}
+              >
+                <button
+                  className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors"
+                  // style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #2e2e2e" }}
+                >
+                  {/* Avatar circle with initials */}
+                  <div
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
+                    style={{ background: "linear-gradient(135deg,#c9a835,#8b6914)", color: "#0d0d12" }}
+                  >
+                    {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  {/* <span className="text-xs font-semibold max-w-20 truncate" style={{ color: "#ddd" }}>
+                    {user.name}
+                  </span> */}
+                  {/* <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m6 9 6 6 6-6"/>  m
+                  </svg> */}
+                </button>
+
+                {/* Dropdown */}
+                {userMenuOpen && (
+                  <div
+                    className="absolute right-0 top-full mt-1 w-48 py-1.5 rounded-xl z-50"
+                    style={{
+                      background: "#141414",
+                      border:     "1px solid #2a2a2a",
+                      borderTop:  "2px solid #c9a835",
+                      boxShadow:  "0 8px 32px rgba(0,0,0,0.7)",
+                    }}
+                  >
+                    {/* User info */}
+                    <div className="px-4 py-2.5 mb-1" style={{ borderBottom: "1px solid #222" }}>
+                      <p className="text-xs font-semibold truncate" style={{ color: "#ddd" }}>{user.name}</p>
+                      <p className="text-[11px] truncate mt-0.5" style={{ color: "#555" }}>{user.email}</p>
+                    </div>
+                    <a href="/profile"
+                      className="flex items-center gap-3 px-4 py-2 text-sm transition-all"
+                      style={{ color: "#aaa" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = "#e8c84a"; e.currentTarget.style.background = "rgba(232,200,74,0.07)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = "#aaa"; e.currentTarget.style.background = ""; }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                      </svg>
+                      គណនី
+                    </a>
+                    <a href="/deposit"
+                      className="flex items-center gap-3 px-4 py-2 text-sm transition-all"
+                      style={{ color: "#aaa" }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = "#e8c84a"; e.currentTarget.style.background = "rgba(232,200,74,0.07)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = "#aaa"; e.currentTarget.style.background = ""; }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20 12V7H4v13h16v-5"/><path d="M20 12a2 2 0 0 0-4 0 2 2 0 0 0 4 0Z"/>
+                      </svg>
+                      Top Up
+                    </a>
+                    <div style={{ borderTop: "1px solid #222", marginTop: "4px", paddingTop: "4px" }}>
+                      <button
+                        onClick={logout}
+                        disabled={authLoading}
+                        className="w-full flex items-center gap-3 px-4 py-2 text-sm transition-all"
+                        style={{ color: "#ef4444", background: "transparent", textAlign: "left" }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+                        </svg>
+                        {authLoading ? "កំពុងចាកចេញ..." : "ចាកចេញ"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* ── Guest: Login button ── */
+              <a
+                href="/login"
+                className="flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-bold transition-all"
+                style={{
+                  background: "linear-gradient(90deg,#c9a835,#8b6914)",
+                  color:      "#0d0d12",
+                  boxShadow:  "0 2px 10px rgba(201,168,53,0.3)",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/>
+                </svg>
+                ចូលគណនី
+              </a>
+            )}
           </div>
 
           {/* Hamburger (mobile) */}
@@ -306,6 +404,59 @@ export default function Navbar() {
               {item.label}
             </a>
           ))}
+
+          {/* Mobile auth section */}
+          <div className="mt-2 pt-2" style={{ borderTop: "1px solid #1e1e1e" }}>
+            {user ? (
+              <>
+                {/* User info row */}
+                <div className="flex items-center gap-3 px-3 py-2.5 mb-1">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                    style={{ background: "linear-gradient(135deg,#c9a835,#8b6914)", color: "#0d0d12" }}
+                  >
+                    {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate" style={{ color: "#ddd" }}>{user.name}</p>
+                    <p className="text-xs truncate" style={{ color: "#555" }}>{user.email}</p>
+                  </div>
+                </div>
+                <a href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded text-sm" style={{ color: "#aaa" }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  គណនី
+                </a>
+                <button
+                  onClick={logout}
+                  disabled={authLoading}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded text-sm"
+                  style={{ color: "#ef4444", background: "transparent", textAlign: "left" }}
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>
+                  </svg>
+                  {authLoading ? "កំពុងចាកចេញ..." : "ចាកចេញ"}
+                </button>
+              </>
+            ) : (
+              <a
+                href="/login"
+                className="flex items-center justify-center gap-2 mx-1 py-3 rounded-lg text-sm font-black"
+                style={{
+                  background: "linear-gradient(90deg,#c9a835,#8b6914)",
+                  color:      "#0d0d12",
+                  boxShadow:  "0 2px 12px rgba(201,168,53,0.3)",
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" x2="3" y1="12" y2="12"/>
+                </svg>
+                ចូលគណនី
+              </a>
+            )}
+          </div>
         </div>
       )}
     </nav>

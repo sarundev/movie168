@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useAuth } from "../context/AuthContext";
 
 /* ─── Icons ─────────────────────────────────────────── */
 const HomeIcon = () => (
@@ -32,39 +33,33 @@ const ProfileIcon = () => (
   </svg>
 );
 
-/* Center: search + play merged icon */
-// const SearchPlayIcon = () => (
-//   <svg width="14" height="14" viewBox="0 0 28 28" fill="none">
-//     <circle cx="11.5" cy="11.5" r="7.5" stroke="white" strokeWidth="2.2" />
-//     <path d="M17.5 17.5 25 25" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-//     <polygon points="9,8.5 9,14.5 14.5,11.5" fill="white" />
-//   </svg>
-// );
-
-/* ─── Nav data ───────────────────────────────────────── */
-const tabs = [
-  { label: "ទំព័រដើម",  href: "/",       icon: <HomeIcon />,    isCenter: false },
-  { label: "រឿងខ្លី",   href: "/movies",  icon: <MovieIcon />,   isCenter: false },
-  // { label: "ស្វែងរក",  href: "/search",  icon: null,            isCenter: true  },
-  { label: "រឿងភាគ",   href: "/series",  icon: <SeriesIcon />,  isCenter: false },
-  { label: "គណនី",     href: "/profile", icon: <ProfileIcon />, isCenter: false },
-] as const;
+const LoginIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+    <polyline points="10 17 15 12 10 7"/>
+    <line x1="15" x2="3" y1="12" y2="12"/>
+  </svg>
+);
 
 /* ─── Component ──────────────────────────────────────── */
 export default function MobileBottomNav() {
   const pathname = usePathname();
+  const { user, logout, loading: authLoading } = useAuth();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0]);
 
+  const staticTabs = [
+    { label: "ទំព័រដើម", href: "/",       icon: <HomeIcon /> },
+    { label: "រឿងខ្លី",  href: "/movies",  icon: <MovieIcon /> },
+    { label: "រឿងភាគ",  href: "/series",  icon: <SeriesIcon /> },
+  ] as const;
+
   return (
     <>
-      {/* ── Inline styles for transitions (no Tailwind purge risk) ── */}
       <style>{`
         .mnav-tab { transition: color 180ms ease, transform 180ms ease; }
         .mnav-tab:active { transform: scale(0.92); }
-        .mnav-center-btn { transition: box-shadow 180ms ease, transform 180ms ease; }
-        .mnav-center-btn:active { transform: scale(0.93) translateY(-18px); }
         .mnav-indicator {
           width: 20px; height: 3px; border-radius: 9999px;
           background: #e01010;
@@ -75,107 +70,127 @@ export default function MobileBottomNav() {
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 z-50"
         style={{
-          height: "68px",
-          background: "rgba(10, 10, 13, 0.96)",
-          backdropFilter: "blur(24px)",
+          height:               "68px",
+          background:           "rgba(10, 10, 13, 0.96)",
+          backdropFilter:       "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
-          boxShadow: "0 -8px 32px rgba(0,0,0,0.7)",
-          /* iOS safe area */
-          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          borderTop:            "1px solid rgba(255,255,255,0.06)",
+          boxShadow:            "0 -8px 32px rgba(0,0,0,0.7)",
+          paddingBottom:        "env(safe-area-inset-bottom, 0px)",
         }}
       >
         <div className="flex items-end h-full">
-          {tabs.map((tab) => {
+
+          {/* Static tabs: Home, Movies, Series */}
+          {staticTabs.map((tab) => {
             const active = isActive(tab.href);
-
-            /* ── Centre search button ── */
-            // if (tab.isCenter) {
-            //   return (
-            //     <a
-            //       key={tab.label}
-            //       href={tab.href}
-            //       aria-label={tab.label}
-            //       className="mnav-center-btn  flex flex-col items-center flex-1"
-                 
-            //     >
-            //       {/* Floating circle */}
-            //       <div
-            //         style={{
-            //           width: "40px",
-            //           height: "40px",
-            //           borderRadius: "50%",
-            //           background: "linear-gradient(145deg, #ff2828, #b80000)",
-            //           display: "flex",
-            //           alignItems: "center",
-            //           justifyContent: "center",
-            //           /* Outer ring so it looks detached from the bar */
-            //           outline: "3px solid rgba(10,10,13,0.96)",
-            //           outlineOffset: "2px",
-            //           boxShadow:
-            //             "0 6px 24px rgba(220,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08) inset",
-            //         }}
-
-            //       >
-            //         <SearchPlayIcon />
-            //       </div>
-
-            //       {/* Label */}
-            //       <span
-            //         style={{
-            //           marginTop: "6px",
-            //           fontSize: "10px",
-            //           fontFamily: "'Battambang', 'Khmer', serif",
-            //           color: active ? "#ff4040" : "#555",
-            //           letterSpacing: "0.02em",
-            //           lineHeight: 1,
-            //         }}
-            //       >
-            //         {tab.label}
-            //       </span>
-            //     </a>
-            //   );
-            // }
-
-            /* ── Regular tab ── */
             return (
               <a
                 key={tab.label}
                 href={tab.href}
                 aria-label={tab.label}
                 className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1"
-                style={{
-                  color: active ? "#ff4040" : "#4a4a55",
-                  textDecoration: "none",
-                }}
+                style={{ color: active ? "#ff4040" : "#4a4a55", textDecoration: "none" }}
               >
-                {/* Active bar indicator at top */}
-                <div
-                  className="mnav-indicator"
-                  style={{
-                    marginBottom: "2px",
-                    opacity: active ? 1 : 0,
-                    width: active ? "20px" : "0px",
-                  }}
-                />
-
-                {/* Icon */}
+                <div className="mnav-indicator" style={{ marginBottom: "2px", opacity: active ? 1 : 0, width: active ? "20px" : "0px" }} />
                 <div style={{ lineHeight: 0 }}>{tab.icon}</div>
-
-                {/* Label */}
-                <span
-                  style={{
-                    fontSize: "10px",
-                    fontFamily: "'Battambang', 'Khmer', serif",
-                    lineHeight: 1.1,
-                    letterSpacing: "0.02em",
-                  }}
-                >
+                <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1, letterSpacing: "0.02em" }}>
                   {tab.label}
                 </span>
               </a>
             );
           })}
+
+          {/* Auth tab: Profile (logged in) or Login (guest) */}
+          {user ? (
+            /* ── Logged-in: profile link + avatar dot ── */
+            <a
+              href="/profile"
+              aria-label="គណនី"
+              className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1 relative"
+              style={{ color: isActive("/profile") ? "#c9a835" : "#4a4a55", textDecoration: "none" }}
+            >
+              {/* Gold active bar */}
+              <div
+                className="mnav-indicator"
+                style={{
+                  marginBottom: "2px",
+                  opacity:      isActive("/profile") ? 1 : 0,
+                  width:        isActive("/profile") ? "20px" : "0px",
+                  background:   "#c9a835",
+                }}
+              />
+              {/* Avatar with initials */}
+              <div className="relative" style={{ lineHeight: 0 }}>
+                <div
+                  className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black"
+                  style={{
+                    background: isActive("/profile")
+                      ? "linear-gradient(135deg,#c9a835,#8b6914)"
+                      : "rgba(201,168,53,0.25)",
+                    color:      "#0d0d12",
+                    border:     "1.5px solid rgba(201,168,53,0.5)",
+                  }}
+                >
+                  {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                </div>
+                {/* Online dot */}
+                <span
+                  className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
+                  style={{ background: "#22c55e", border: "1.5px solid rgba(10,10,13,0.96)" }}
+                />
+              </div>
+              <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1 }}>
+                គណនី
+              </span>
+            </a>
+          ) : (
+            /* ── Guest: Login button ── */
+            <a
+              href="/login"
+              aria-label="ចូលគណនី"
+              className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1"
+              style={{ color: isActive("/login") ? "#c9a835" : "#4a4a55", textDecoration: "none" }}
+            >
+              <div
+                className="mnav-indicator"
+                style={{
+                  marginBottom: "2px",
+                  opacity:      isActive("/login") ? 1 : 0,
+                  width:        isActive("/login") ? "20px" : "0px",
+                  background:   "#c9a835",
+                }}
+              />
+              <div style={{ lineHeight: 0 }}><LoginIcon /></div>
+              <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1 }}>
+                ចូល
+              </span>
+            </a>
+          )}
+
+          {/* Logout tab — only when logged in (long-press style: just a quick tap) */}
+          {user && (
+            <button
+              onClick={logout}
+              disabled={authLoading}
+              aria-label="ចាកចេញ"
+              className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1"
+              style={{ color: "#4a4a55", background: "transparent", border: "none", cursor: "pointer" }}
+            >
+              <div className="mnav-indicator" style={{ marginBottom: "2px", opacity: 0, width: "0px" }} />
+              <div style={{ lineHeight: 0, color: authLoading ? "#333" : "#ef4444" }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" x2="9" y1="12" y2="12"/>
+                </svg>
+              </div>
+              <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1, color: authLoading ? "#333" : "#ef4444" }}>
+                {authLoading ? "..." : "ចាក"}
+              </span>
+            </button>
+          )}
+
         </div>
       </nav>
     </>

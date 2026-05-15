@@ -67,7 +67,7 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
           return (
             <a
               key={movie.id}
-              href={`/movie/${movie.id}`}
+              href={`/movie/${movie.slug ?? movie.id}`}
               className="group shrink-0 relative cursor-pointer"
               style={{ width: "220px", height: "300px" }}
             >

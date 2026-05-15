@@ -67,7 +67,7 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
                 movie.quality === "HD" ? "HD 720P" : movie.quality;
 
           return (
-            <a key={movie.id} href={`/movie/${movie.id}`} className="group cursor-pointer">
+            <a key={movie.id} href={`/movie/${movie.slug ?? movie.id}`} className="group cursor-pointer">
               {/* Poster */}
               <div
                 className="relative rounded-lg overflow-hidden"
@@ -150,7 +150,9 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
         onMouseLeave={() => { paused.current = false; }}
       >
         {movies.map(movie => (
-          <MovieCard key={movie.id} movie={movie} />
+          <a key={movie.id} href={`/movie/${movie.slug ?? movie.id}`} className="shrink-0">
+            <MovieCard movie={movie} />
+          </a>
         ))}
       </div>
     </div>
