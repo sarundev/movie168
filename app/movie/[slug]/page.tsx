@@ -302,7 +302,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ slug: st
     : allMovies.filter(m => genreNames.some(g => m.genres.includes(g))).slice(0, 10);
 
   return (
-    <div className="min-h-screen" style={{ background: "#111116" }}>
+    <div className="min-h-screen pt-20" style={{ background: "#111116" }}>
       <Navbar />
 
       {/* ── Player section ── */}
