@@ -41,11 +41,12 @@ function timeAgo(dateStr: string) {
 function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   const [hover, setHover] = useState(0);
   return (
-    <div className="flex items-center gap-1 flex-wrap">
+    <div className="flex items-center gap-0 flex-wrap -mx-1.5">
       {[1,2,3,4,5,6,7,8,9,10].map(n => (
         <button key={n} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)}
-          onClick={() => onChange(n)} className="transition-transform hover:scale-125" aria-label={`Rate ${n}`}>
-          <svg width="18" height="18" viewBox="0 0 20 20"
+          onClick={() => onChange(n)} className="transition-transform hover:scale-125 active:scale-95 p-1.5"
+          style={{ touchAction: "manipulation" }} aria-label={`Rate ${n}`}>
+          <svg width="20" height="20" viewBox="0 0 20 20"
             fill={(hover || value) >= n ? "#c9a835" : "rgba(255,255,255,0.12)"}>
             <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
           </svg>
@@ -96,8 +97,8 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
   }
 
   return (
-    <div style={{ marginLeft: depth > 0 ? "36px" : "0" }}>
-      <div className="flex gap-3 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+    <div style={{ marginLeft: depth > 0 ? "clamp(16px,5vw,36px)" : "0" }}>
+      <div className="flex gap-2.5 py-3.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0"
           style={{ background: "linear-gradient(135deg,#c9a835,#8b6914)", color: "#0d0d12" }}>
           {(comment.user?.name ?? "?").slice(0, 2).toUpperCase()}
@@ -108,24 +109,27 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
             <span className="text-xs" style={{ color: "#555" }}>{timeAgo(comment.created_at)}</span>
           </div>
           <p className="text-sm leading-relaxed" style={{ color: "#bbb" }}>{comment.body}</p>
-          <div className="flex items-center gap-4 mt-2">
-            <button onClick={() => handleReact("like")} className="flex items-center gap-1 text-xs transition-colors"
-              style={{ color: myReaction === "like" ? "#c9a835" : "#555" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <div className="flex items-center gap-1 mt-1 -ml-2">
+            <button onClick={() => handleReact("like")}
+              className="flex items-center gap-1 text-xs transition-colors px-2 py-1.5"
+              style={{ color: myReaction === "like" ? "#c9a835" : "#555", touchAction: "manipulation" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M7 10v12M15 5.88L14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h0a3.13 3.13 0 0 1 3 3.88z"/>
               </svg>
               {likes}
             </button>
-            <button onClick={() => handleReact("dislike")} className="flex items-center gap-1 text-xs transition-colors"
-              style={{ color: myReaction === "dislike" ? "#ef4444" : "#555" }}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <button onClick={() => handleReact("dislike")}
+              className="flex items-center gap-1 text-xs transition-colors px-2 py-1.5"
+              style={{ color: myReaction === "dislike" ? "#ef4444" : "#555", touchAction: "manipulation" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M17 14V2M9 18.12L10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88z"/>
               </svg>
               {dislikes}
             </button>
             {token && depth === 0 && (
-              <button onClick={() => setReplyOpen(r => !r)} className="text-xs transition-colors"
-                style={{ color: "#555" }}
+              <button onClick={() => setReplyOpen(r => !r)}
+                className="text-xs transition-colors px-2 py-1.5"
+                style={{ color: "#555", touchAction: "manipulation" }}
                 onMouseEnter={e => (e.currentTarget.style.color = "#c9a835")}
                 onMouseLeave={e => (e.currentTarget.style.color = "#555")}>
                 ឆ្លើយតប
@@ -133,16 +137,21 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
             )}
           </div>
           {replyOpen && (
-            <div className="flex gap-2 mt-3">
+            <div className="flex flex-col gap-2 mt-3">
               <input value={replyBody} onChange={e => setReplyBody(e.target.value)}
-                placeholder="ឆ្លើយតប..." className="flex-1 px-3 py-2 rounded-lg text-sm outline-none"
+                placeholder="ឆ្លើយតប..." className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f0f0f0" }}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitReply(); }}} />
-              <button onClick={submitReply} disabled={submitting || !replyBody.trim()}
-                className="px-4 py-2 rounded-lg text-xs font-bold"
-                style={{ background: "rgba(201,168,53,0.15)", color: "#c9a835", border: "1px solid rgba(201,168,53,0.3)" }}>
-                {submitting ? "..." : "បញ្ជូន"}
-              </button>
+              <div className="flex gap-2 justify-end">
+                <button onClick={() => setReplyOpen(false)}
+                  className="px-3 py-2 rounded-lg text-xs"
+                  style={{ background: "rgba(255,255,255,0.05)", color: "#666" }}>លប់ចោល</button>
+                <button onClick={submitReply} disabled={submitting || !replyBody.trim()}
+                  className="px-4 py-2 rounded-lg text-xs font-bold"
+                  style={{ background: "rgba(201,168,53,0.15)", color: "#c9a835", border: "1px solid rgba(201,168,53,0.3)" }}>
+                  {submitting ? "..." : "បញ្ជូន"}
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -302,13 +311,13 @@ export default function MovieDetailPage({ params }: { params: Promise<{ slug: st
     : allMovies.filter(m => genreNames.some(g => m.genres.includes(g))).slice(0, 10);
 
   return (
-    <div className="min-h-screen pt-20" style={{ background: "#111116" }}>
+    <div className="min-h-screen md:pt-4 pt-20" style={{ background: "#111116" }}>
       <Navbar />
 
       {/* ── Player section ── */}
       <div style={{ background: "#000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         {/* 16:9 player */}
-        <div className="relative w-full mx-auto" style={{ maxWidth: "1280px", aspectRatio: "16/9" }}>
+        <div className="relative w-full mx-auto" style={{ maxWidth: "1350px", aspectRatio: "16/9" }}>
           {defaultSource?.embed_url && user ? (
             <iframe
               src={defaultSource.embed_url}
@@ -355,7 +364,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ slug: st
         </div>
 
         {/* Source switcher */}
-        {user && (movie.sources ?? []).filter(s => s.can_watch).length > 1 && (() => {
+        {/* {user && (movie.sources ?? []).filter(s => s.can_watch).length > 1 && (() => {
           const seen = new Set<string>();
           const unique = (movie.sources ?? []).filter(s => s.can_watch && !seen.has(s.label) && seen.add(s.label));
           return (
@@ -373,7 +382,7 @@ export default function MovieDetailPage({ params }: { params: Promise<{ slug: st
               ))}
             </div>
           );
-        })()}
+        })()} */}
       </div>
 
       {/* ── Main layout ── */}
@@ -384,52 +393,26 @@ export default function MovieDetailPage({ params }: { params: Promise<{ slug: st
           <div className="flex-1 min-w-0 space-y-4">
 
             {/* Play button — auth gated */}
-            <div className="rounded-xl px-4 py-3 flex items-center gap-4"
-              style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
-               
-               
-              {user ? (
-                <>
-                  <a href={`/movie/${slug}/player${defaultSource ? `?source=${defaultSource.id}` : ""}`}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:opacity-90 active:scale-95 shrink-0"
-                    style={{ background: "linear-gradient(135deg,#c9a835,#8a6e1a)", color: "#0d0d12", boxShadow: "0 4px 16px rgba(201,168,53,0.3)" }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    ចុចមើលរឿង
-                  </a>
-
-                  {/* Unique quality chips */}
-                  {(() => {
-                    const seen = new Set<string>();
-                    return (movie.sources ?? [])
-                      .filter(s => s.can_watch && !seen.has(s.label) && seen.add(s.label))
-                      .map(s => (
-                        <a key={s.id} href={`/movie/${slug}/player?source=${s.id}`}
-                          className="text-xs px-3 py-1.5 rounded-lg font-semibold transition-all hover:border-amber-400 hover:text-amber-400"
-                          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#777" }}>
-                          {s.label}
-                        </a>
-                      ));
-                  })()}
-                </>
-              ) : (
-                <>
-                  <a href={`/login?redirect=/movie/${slug}/player${defaultSource ? `?source=${defaultSource.id}` : ""}`}
-                    className="flex items-center gap-2.5 px-5 py-2.5 rounded-lg font-bold text-sm transition-all hover:opacity-90 active:scale-95 shrink-0"
-                    style={{ background: "linear-gradient(135deg,#c9a835,#8a6e1a)", color: "#0d0d12", boxShadow: "0 4px 16px rgba(201,168,53,0.3)" }}>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                    ចុចមើលរឿង
-                  </a>
-                  <div className="flex items-center gap-2">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                    </svg>
-                    <span className="text-xs" style={{ color: "#666" }}>
-                      ត្រូវការ <a href={`/login?redirect=/movie/${slug}`} className="hover:underline" style={{ color: "#c9a835" }}>ចូលគណនី</a> ដើម្បីមើល
-                    </span>
-                  </div>
-                </>
-              )}
-            </div>
+            {!user && (
+              <div className="rounded-xl px-4 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3"
+                style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
+                <a href={`/login?redirect=/movie/${slug}/player${defaultSource ? `?source=${defaultSource.id}` : ""}`}
+                  className="flex items-center justify-center gap-2.5 px-5 py-3 rounded-lg font-bold text-sm transition-all hover:opacity-90 active:scale-95"
+                  style={{ background: "linear-gradient(135deg,#c9a835,#8a6e1a)", color: "#0d0d12",
+                    boxShadow: "0 4px 16px rgba(201,168,53,0.3)", touchAction: "manipulation" }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  ចុចមើលរឿង
+                </a>
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                  </svg>
+                  <span className="text-xs" style={{ color: "#666" }}>
+                    ត្រូវការ <a href={`/login?redirect=/movie/${slug}`} className="hover:underline" style={{ color: "#c9a835" }}>ចូលគណនី</a> ដើម្បីមើល
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Movie info card */}
             <div className="rounded-xl p-4" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -645,14 +628,32 @@ export default function MovieDetailPage({ params }: { params: Promise<{ slug: st
 
           {/* ── RIGHT SIDEBAR ── */}
           <div className="w-full lg:w-72 shrink-0">
-            <div className="sticky top-20 rounded-xl overflow-hidden" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="lg:sticky lg:top-20 rounded-xl overflow-hidden" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
               <div className="px-4 py-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                 <div className="flex items-center gap-2">
                   <div className="w-1 h-5 rounded-full" style={{ background: "linear-gradient(to bottom,#c9a835,#8a6e1a)" }} />
                   <h3 className="text-sm font-bold" style={{ color: "#f0f0f0" }}>ចំណាត់ថ្នាក់ទំព 10 ប្រចាំសប្តាហ៍</h3>
                 </div>
               </div>
-              <div>
+              {/* Mobile: horizontal poster scroll */}
+              <div className="lg:hidden flex overflow-x-auto gap-3 px-3 py-3 hide-scrollbar">
+                {allMovies.sort((a, b) => b.rating - a.rating).slice(0, 10).map(m => (
+                  <a key={m.id} href={`/movie/${m.slug ?? m.id}`}
+                    className="flex flex-col shrink-0 gap-1.5 group" style={{ touchAction: "manipulation" }}>
+                    <div className="relative rounded-lg overflow-hidden"
+                      style={{ width: "68px", height: "95px", background: "#2a2a35" }}>
+                      {m.image && (
+                        <img src={m.image} alt={m.title} className="absolute inset-0 w-full h-full object-cover"
+                          onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                      )}
+                    </div>
+                    <p className="text-[10px] text-center leading-snug line-clamp-2 group-hover:text-amber-400 transition-colors"
+                      style={{ color: "#bbb", width: "68px" }}>{m.title}</p>
+                  </a>
+                ))}
+              </div>
+              {/* Desktop: vertical list */}
+              <div className="hidden lg:block">
                 {allMovies.sort((a, b) => b.rating - a.rating).slice(0, 10).map(m => (
                   <a key={m.id} href={`/movie/${m.slug ?? m.id}`}
                     className="flex items-center gap-3 px-3 py-2.5 transition-colors group"
