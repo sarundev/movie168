@@ -229,9 +229,10 @@ export default function Navbar() {
           </div>
 
           {/* User icon */}
+          <div className="relative hidden md:block">
           <a
             href="/profile"
-            className="w-8 h-8 rounded-full flex items-center justify-center transition-colors"
+            className="w-8 h-8  rounded-full flex items-center justify-center transition-colors"
             style={{ background: "#1c1c1c", border: "1px solid #2e2e2e", color: "#ccc" }}
             onMouseEnter={(e) => {
               (e.currentTarget as HTMLElement).style.borderColor = "#e8c84a";
@@ -248,6 +249,7 @@ export default function Navbar() {
               <circle cx="12" cy="7" r="4" />
             </svg>
           </a>
+          </div>
 
           {/* Hamburger (mobile) */}
           <button
