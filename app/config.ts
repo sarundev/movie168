@@ -28,6 +28,7 @@ export const API = {
 
   me: {
     profile:      `${R}/me`,
+    avatar:       `${R}/me/avatar`,
     balance:      `${R}/me/balance`,
     purchases:    `${R}/me/purchases`,
     watchHistory: `${R}/me/watch-history`,

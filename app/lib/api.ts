@@ -317,6 +317,23 @@ export async function fetchMyPurchases(token: string): Promise<ApiPurchase[]> {
   return Array.isArray(data) ? data : (data as { data: ApiPurchase[] }).data ?? [];
 }
 
+export async function uploadAvatar(file: File, token: string): Promise<ApiUser> {
+  const form = new FormData();
+  form.append("avatar", file);
+  const res = await fetch(API.me.avatar, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+    body: form,
+  });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const d = await res.json(); msg = d?.message ?? msg; } catch {}
+    throw new ApiError(msg, res.status);
+  }
+  const data = await res.json() as { data: ApiUser } | ApiUser;
+  return (data as { data: ApiUser }).data ?? (data as ApiUser);
+}
+
 export async function fetchWatchHistory(token: string): Promise<ApiWatchHistory[]> {
   const data = await req<{ data: ApiWatchHistory[] } | ApiWatchHistory[]>(API.me.watchHistory, {}, token);
   return Array.isArray(data) ? data : (data as { data: ApiWatchHistory[] }).data ?? [];

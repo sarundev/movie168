@@ -25,7 +25,6 @@ const SeriesIcon = () => (
     <polygon points="10,11 10,17 16,14" fill="currentColor" stroke="none" />
   </svg>
 );
-
 const ProfileIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="8" r="4" />

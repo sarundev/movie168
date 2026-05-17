@@ -1,5 +1,6 @@
 import { fetchMovieDetail, canWatchMovie, type ApiMovie } from "../../../lib/api";
 import { getServerUser } from "../../../lib/server-auth";
+import { serverApi } from "../../../lib/server-api";
 import { allMovies } from "../../../data/movies";
 import PlayerClient from "./PlayerClient";
 
@@ -55,6 +56,11 @@ export default async function PlayerPage({
   const sources          = movie.sources ?? [];
 
   const sessionToken = movie.playback_session_token ?? null;
+
+  // Record view when user actually reaches the player — most reliable tracking point
+  if (canWatch && user) {
+    serverApi(`/movies/${movie.id}/view`, { method: "POST", withAuth: true }).catch(() => {});
+  }
 
   // Access wall
   if (!canWatch) {
@@ -130,6 +136,7 @@ export default async function PlayerPage({
             movieTitle={movie.title}
             sessionToken={sessionToken}
             movieSlug={slug}
+            movieId={movie.id}
           />
 
           {/* Movie info */}

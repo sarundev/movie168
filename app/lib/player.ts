@@ -1,6 +1,8 @@
 const PLAYER_BASE =
   (process.env.NEXT_PUBLIC_PLAYER_URL ?? "https://streaming-iframe.vercel.app/embed/movies").replace(/\/$/, "");
 
+export const PLAYER_ORIGIN = new URL(PLAYER_BASE).origin;
+
 export function buildPlaybackUrl({
   sessionToken,
   movieSlug,

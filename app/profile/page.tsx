@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 import {
-  fetchMe, fetchMyPurchases, fetchWatchHistory, fetchCreditBalance,
+  fetchMe, fetchMyPurchases, fetchWatchHistory, fetchCreditBalance, uploadAvatar,
   type ApiUser, type ApiPurchase, type ApiWatchHistory,
 } from "../lib/api";
 
@@ -30,20 +30,20 @@ const ChevronRight = () => (
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 
-function Avatar({ name, src, onUpload, size = 88 }: {
-  name: string; src: string | null; onUpload: (url: string) => void; size?: number;
+function Avatar({ name, src, onFileSelect, uploading = false, size = 88 }: {
+  name: string; src: string | null; onFileSelect: (file: File) => void; uploading?: boolean; size?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
 
   return (
     <div
-      className="relative group cursor-pointer shrink-0"
-      style={{ width: size, height: size }}
-      onClick={() => inputRef.current?.click()}
+      className="relative group shrink-0"
+      style={{ width: size, height: size, cursor: uploading ? "default" : "pointer" }}
+      onClick={() => !uploading && inputRef.current?.click()}
     >
       <input ref={inputRef} type="file" accept="image/*" className="hidden"
-        onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(URL.createObjectURL(f)); }} />
+        onChange={e => { const f = e.target.files?.[0]; if (f) { onFileSelect(f); e.target.value = ""; } }} />
 
       {/* Ring */}
       <div className="absolute inset-0 rounded-full"
@@ -54,12 +54,17 @@ function Avatar({ name, src, onUpload, size = 88 }: {
         </div>
       </div>
 
-      {/* Camera overlay */}
-      <div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200"
+      {/* Overlay — spinner while uploading, camera icon on hover */}
+      <div className={`absolute inset-0 rounded-full flex items-center justify-center transition-all duration-200 ${uploading ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
         style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(2px)" }}>
-        <div className="flex flex-col items-center gap-0.5" style={{ color: "#c9a835" }}>
-          <CameraIcon />
-        </div>
+        {uploading ? (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            style={{ animation: "spin 0.8s linear infinite" }}>
+            <path d="M21 12a9 9 0 1 1-6.22-8.56"/>
+          </svg>
+        ) : (
+          <div style={{ color: "#c9a835" }}><CameraIcon /></div>
+        )}
       </div>
     </div>
   );
@@ -188,6 +193,7 @@ export default function ProfilePage() {
   const { user, logout, loading: authLoading } = useAuth();
   const [activeTab, setActiveTab] = useState<"history" | "saved" | "settings">("history");
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const [profile,   setProfile]   = useState<ApiUser | null>(null);
   const [history,   setHistory]   = useState<ApiWatchHistory[]>([]);
@@ -195,20 +201,61 @@ export default function ProfilePage() {
   const [credits,   setCredits]   = useState<number>(0);
   const [loadingData, setLoadingData] = useState(true);
 
+  const avatarStorageKey = user ? `avatar_${user.id ?? user.email}` : null;
+
   useEffect(() => {
     if (!user) { setLoadingData(false); return; }
+    // Restore locally-saved avatar immediately while API loads
+    const local = avatarStorageKey ? localStorage.getItem(avatarStorageKey) : null;
+    if (local) setAvatarSrc(local);
+
     Promise.allSettled([
       fetchMe(user.token),
       fetchWatchHistory(user.token),
       fetchMyPurchases(user.token),
       fetchCreditBalance(user.token),
     ]).then(([p, h, pur, bal]) => {
-      if (p.status   === "fulfilled") setProfile(p.value);
+      if (p.status === "fulfilled") {
+        setProfile(p.value);
+        // Server avatar wins over local if present
+        if (p.value.avatar) setAvatarSrc(p.value.avatar);
+      }
       if (h.status   === "fulfilled") setHistory(h.value);
       if (pur.status === "fulfilled") setPurchases(pur.value);
       if (bal.status === "fulfilled") setCredits(bal.value.credits);
     }).finally(() => setLoadingData(false));
-  }, [user]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function handleAvatarSelect(file: File) {
+    if (!user) return;
+    setAvatarUploading(true);
+    // Convert to base64 for local persistence
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    // Show preview immediately
+    setAvatarSrc(base64);
+    // Save locally so it survives page refresh even if API fails
+    if (avatarStorageKey) localStorage.setItem(avatarStorageKey, base64);
+
+    try {
+      const updated = await uploadAvatar(file, user.token);
+      if (updated.avatar) {
+        setAvatarSrc(updated.avatar);
+        setProfile(prev => prev ? { ...prev, avatar: updated.avatar } : prev);
+        // Replace local base64 with the server URL
+        if (avatarStorageKey) localStorage.setItem(avatarStorageKey, updated.avatar);
+      }
+    } catch {
+      // API failed — local base64 already saved, so image persists on refresh
+    } finally {
+      setAvatarUploading(false);
+    }
+  }
 
   const displayName  = profile?.name  ?? user?.name  ?? "Guest";
   const displayEmail = profile?.email ?? user?.email ?? "";
@@ -243,7 +290,8 @@ export default function ProfilePage() {
     <div className="min-h-screen" style={{ background: "#0d0d12" }}>
       <Navbar />
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-24 pb-20">
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-20">
 
         {/* ── Hero card ── */}
         <div className="relative rounded-3xl overflow-hidden mb-4"
@@ -258,7 +306,7 @@ export default function ProfilePage() {
           {/* Avatar + info */}
           <div className="px-6 pb-6">
             <div className="flex items-end gap-5 -mt-12 mb-5">
-              <Avatar name={displayName} src={avatarSrc} onUpload={setAvatarSrc} size={88} />
+              <Avatar name={displayName} src={avatarSrc} onFileSelect={handleAvatarSelect} uploading={avatarUploading} size={88} />
               <div className="pb-1 min-w-0">
                 <div className="flex flex-wrap items-center gap-2 mb-1">
                   <h1 className="text-xl font-black leading-none" style={{ color: "#f0f0f0" }}>{displayName}</h1>
@@ -293,7 +341,10 @@ export default function ProfilePage() {
                 <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
                 <StatPill value={totalBuy} label="ចំនួនទិញ" accent="#a855f7" />
                 <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
-                <StatPill value="Gold" label="កម្រិត" accent="#c9a835" />
+                <StatPill value={`$${credits.toFixed(2)}`} label="ចំនួនទឹកប្រាក់សរុប" accent="#a855f7" />
+
+                {/* <p className="text-xl font-black leading-none" style={{ color: "#c9a835" }}>${credits.toFixed(2)}</p> */}
+                  {/* <p className="text-[10px] mt-1" style={{ color: "#555" }}>≈ ${credits.toFixed(2)} USD</p> */}
               </div>
             )}
           </div>
@@ -302,7 +353,7 @@ export default function ProfilePage() {
         {/* ── Wallet + Top-up row ── */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           {/* Balance */}
-          <div className="rounded-2xl p-4 flex flex-col gap-3"
+          {/* <div className="rounded-2xl p-4 flex flex-col gap-3"
             style={{ background: "rgba(201,168,53,0.07)", border: "1px solid rgba(201,168,53,0.18)" }}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center"
@@ -323,10 +374,10 @@ export default function ProfilePage() {
                 </>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* Top-up CTA */}
-          <a href="/deposit" className="rounded-2xl p-4 flex flex-col justify-between group"
+          {/* <a href="/deposit" className="rounded-2xl p-4 flex flex-col justify-between group"
             style={{ background: "linear-gradient(135deg,rgba(201,168,53,0.15),rgba(139,105,20,0.08))", border: "1px solid rgba(201,168,53,0.22)" }}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center"
@@ -341,7 +392,7 @@ export default function ProfilePage() {
               <p className="text-base font-black leading-none" style={{ color: "#c9a835" }}>Top Up</p>
               <p className="text-[10px] mt-1" style={{ color: "#555" }}>ចូលប្រាក់ / Upgrade</p>
             </div>
-          </a>
+          </a> */}
         </div>
 
         {/* ── Plan banner ── */}
@@ -365,12 +416,12 @@ export default function ProfilePage() {
         </div>
 
         {/* ── Tabs ── */}
-        <div className="flex gap-1.5 mb-6">
+        <div className="grid grid-cols-3 gap-1.5 mb-6">
           {tabs.map(tab => {
             const active = activeTab === tab.key;
             return (
               <button key={tab.key} onClick={() => setActiveTab(tab.key)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
+                className="flex justify-center items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200"
                 style={{
                   background: active ? "rgba(201,168,53,0.12)" : "rgba(255,255,255,0.04)",
                   color:      active ? "#c9a835" : "#555",

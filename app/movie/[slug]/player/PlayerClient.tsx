@@ -1,8 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { ApiMovieSource } from "../../../lib/api";
-import { buildPlaybackUrl } from "../../../lib/player";
+import { updatePlaybackProgress } from "../../../lib/api";
+import { buildPlaybackUrl, PLAYER_ORIGIN } from "../../../lib/player";
+import { trackMovieViewAction, saveWatchProgressAction } from "../../../actions/movie-actions";
+import { useAuth } from "../../../context/AuthContext";
+
+type PlayerMessage = {
+  source: string;
+  type: "MOVIE_PLAY" | "MOVIE_PROGRESS" | "MOVIE_ENDED";
+  currentTime?: number;
+  duration?: number;
+};
 
 export default function PlayerClient({
   sources,
@@ -10,13 +20,17 @@ export default function PlayerClient({
   movieTitle,
   sessionToken,
   movieSlug,
+  movieId,
 }: {
   sources: ApiMovieSource[];
   initialSourceId: number | null;
   movieTitle: string;
   sessionToken: string | null;
   movieSlug: string;
+  movieId: number;
 }) {
+  const { user } = useAuth();
+
   const activeSource =
     sources.find(s => s.is_default && s.can_watch) ??
     sources.find(s => s.can_watch) ??
@@ -32,6 +46,80 @@ export default function PlayerClient({
   const embedUrl = sessionToken
     ? buildPlaybackUrl({ sessionToken, movieSlug, sourceId: current?.id })
     : null;
+
+  const hasTrackedViewRef = useRef(false);
+  const lastSavedSecondRef = useRef(0);
+  const elapsedSecondsRef = useRef(0);
+
+  // postMessage tracking — fires if the player implements the AISAKI_ART_PLAYER protocol
+  useEffect(() => {
+    if (!embedUrl) return;
+
+    hasTrackedViewRef.current = false;
+    lastSavedSecondRef.current = 0;
+
+    function handleMessage(event: MessageEvent) {
+      if (event.origin !== PLAYER_ORIGIN) return;
+      const data = event.data as PlayerMessage;
+      if (!data || typeof data !== "object") return;
+      if (data.source !== "AISAKI_ART_PLAYER") return;
+
+      if (data.type === "MOVIE_PLAY") {
+        if (hasTrackedViewRef.current) return;
+        hasTrackedViewRef.current = true;
+        trackMovieViewAction(movieId).catch(() => {});
+        return;
+      }
+
+      if (data.type === "MOVIE_PROGRESS") {
+        if (!user) return;
+        const watchedSeconds = Math.floor(Number(data.currentTime ?? 0));
+        const durationSeconds = Math.floor(Number(data.duration ?? 0));
+        if (!durationSeconds || watchedSeconds < 1) return;
+        if (watchedSeconds - lastSavedSecondRef.current < 10) return;
+        lastSavedSecondRef.current = watchedSeconds;
+        saveWatchProgressAction({ movieId, watchedSeconds, durationSeconds }).catch(() => {});
+        return;
+      }
+
+      if (data.type === "MOVIE_ENDED") {
+        if (!user) return;
+        const durationSeconds = Math.floor(Number(data.duration ?? 0));
+        if (!durationSeconds) return;
+        saveWatchProgressAction({ movieId, watchedSeconds: durationSeconds, durationSeconds }).catch(() => {});
+      }
+    }
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [embedUrl, movieId, user]);
+
+  // Time-based fallback using the existing playback session progress endpoint
+  useEffect(() => {
+    if (!sessionToken || !user) return;
+
+    elapsedSecondsRef.current = 0;
+
+    const tick = setInterval(() => {
+      elapsedSecondsRef.current += 10;
+    }, 10_000);
+
+    const save = setInterval(() => {
+      const position = elapsedSecondsRef.current;
+      if (position < 10) return;
+      updatePlaybackProgress(sessionToken, position, user.token).catch(() => {});
+    }, 30_000);
+
+    return () => {
+      clearInterval(tick);
+      clearInterval(save);
+      // Save on unmount (user navigates away)
+      const position = elapsedSecondsRef.current;
+      if (position >= 10) {
+        updatePlaybackProgress(sessionToken, position, user.token).catch(() => {});
+      }
+    };
+  }, [sessionToken, user]);
 
   return (
     <>

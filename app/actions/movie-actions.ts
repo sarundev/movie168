@@ -31,6 +31,40 @@ function extractMessage(error: unknown, fallback: string): string {
   );
 }
 
+// ─── Watch tracking ───────────────────────────────────────────────────────────
+
+export async function trackMovieViewAction(movieId: number): Promise<ActionResult> {
+  try {
+    await serverApi(`/movies/${movieId}/view`, { method: "POST", withAuth: true });
+    return { ok: true };
+  } catch (error) {
+    const e = isApiError(error) ? error : null;
+    return { ok: false, status: e?.status, message: extractMessage(error, "Could not track view."), errors: e?.errors };
+  }
+}
+
+export async function saveWatchProgressAction({
+  movieId,
+  watchedSeconds,
+  durationSeconds,
+}: {
+  movieId: number;
+  watchedSeconds: number;
+  durationSeconds: number;
+}): Promise<ActionResult> {
+  try {
+    await serverApi(`/movies/${movieId}/watch-progress`, {
+      method: "POST",
+      withAuth: true,
+      body: JSON.stringify({ watched_seconds: watchedSeconds, duration_seconds: durationSeconds }),
+    });
+    return { ok: true };
+  } catch (error) {
+    const e = isApiError(error) ? error : null;
+    return { ok: false, status: e?.status, message: extractMessage(error, "Could not save progress."), errors: e?.errors };
+  }
+}
+
 // ─── Movie purchase ───────────────────────────────────────────────────────────
 
 export async function preparePurchaseKhqrAction(
