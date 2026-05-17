@@ -3,8 +3,6 @@
 import { useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
-import { Kantumruy_Pro } from "next/font/google";
-import { Metadata } from "next";
 
 const navItems = [
   {
@@ -71,16 +69,7 @@ const navItems = [
   },
 ];
 
-const kantumruy = Kantumruy_Pro({
-  subsets: ["khmer"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-khmer",
-});
 
-export const metadata: Metadata = {
-  title: "Khmer Website",
-  description: "Khmer font example",
-};
 
 export default function Navbar() {
   const pathname = usePathname();
@@ -111,7 +100,7 @@ export default function Navbar() {
       className="fixed top-0 left-0 right-0 z-50"
       style={{ background: "#0d0d0d", borderBottom: "1px solid #1a1a1a" }}
     >
-      <div className="px-4 sm:px-6 lg:px-10 flex items-center h-24 gap-4">
+      <div className="px-4 sm:px-6 lg:px-10 flex items-center h-16 md:h-20 gap-4">
 
         {/* Logo */}
         <a href="/" className="flex items-center gap-2 shrink-0 mr-2">

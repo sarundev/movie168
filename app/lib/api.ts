@@ -156,11 +156,24 @@ export class ApiError extends Error {
 
 // ─── Core fetcher ────────────────────────────────────────────────────────────
 
+// In-memory cache for client-side requests (server-side uses Next.js Data Cache)
+const _cache = new Map<string, { data: unknown; ts: number }>();
+const CACHE_TTL = 300_000; // 5 minutes
+
 async function req<T>(
   url: string,
   options: RequestInit = {},
   token?: string,
 ): Promise<T> {
+  const isGet = !options.method || options.method.toUpperCase() === "GET";
+  const isClient = typeof window !== "undefined";
+  const cacheKey = isGet && !token && isClient ? url : null;
+
+  if (cacheKey) {
+    const hit = _cache.get(cacheKey);
+    if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data as T;
+  }
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -168,13 +181,18 @@ async function req<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(url, { ...options, headers });
+  // Server-side GET requests use Next.js Data Cache (revalidate every 5 min)
+  const nextOptions = isGet && !isClient ? { next: { revalidate: 300 } } : {};
+
+  const res = await fetch(url, { ...options, headers, ...nextOptions });
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try { const d = await res.json(); msg = d?.message ?? msg; } catch {}
     throw new ApiError(msg, res.status);
   }
-  return res.json() as Promise<T>;
+  const data = await res.json() as T;
+  if (cacheKey) _cache.set(cacheKey, { data, ts: Date.now() });
+  return data;
 }
 
 // ─── Movies ──────────────────────────────────────────────────────────────────

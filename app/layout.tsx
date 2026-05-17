@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist } from "next/font/google";
+import { Geist, Kantumruy_Pro } from "next/font/google";
 import "./globals.css";
 import MobileBottomNav from "./components/MobileBottomNav";
 import { AuthProvider } from "./context/AuthContext";
@@ -7,6 +7,14 @@ import { AuthProvider } from "./context/AuthContext";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const kantumruy = Kantumruy_Pro({
+  subsets: ["khmer"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-khmer",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -20,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${geistSans.variable} h-full`}>
+    <html lang="km" className={`${geistSans.variable} ${kantumruy.variable} h-full`}>
       <body className="bg-[#09090b] text-white min-h-full antialiased" suppressHydrationWarning>
         {/* Extra bottom padding on mobile so content clears the nav bar */}
         <AuthProvider>

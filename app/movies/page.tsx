@@ -85,9 +85,16 @@ export default function MoviesPage() {
   const [genre,       setGenre]       = useState("All");
   const [quality,     setQuality]     = useState<"All"|"4K"|"FHD"|"HD">("All");
   const [sort,        setSort]        = useState("newest");
+  const [searchInput, setSearchInput] = useState("");
   const [search,      setSearch]      = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const loaderRef = useRef<HTMLDivElement>(null);
+
+  // Debounce search input by 400ms to avoid firing API on every keystroke
+  useEffect(() => {
+    const id = setTimeout(() => setSearch(searchInput), 400);
+    return () => clearTimeout(id);
+  }, [searchInput]);
 
   const buildParams = useCallback((pg: number) => {
     const p: Record<string, string> = { page: String(pg), per_page: "24" };
@@ -170,28 +177,21 @@ export default function MoviesPage() {
 
           {/* Search + sort */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div className="relative w-full sm:w-48">
+            <div className="relative flex just w-full sm:w-48">
+              <div className="relative">
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <input
                 type="text"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
                 placeholder="Search movies..."
                 className="pl-9 pr-4 py-2 rounded-lg text-sm text-white placeholder-zinc-600 outline-none w-full"
                 style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)" }}
               />
-            </div>
-            <div className="flex items-center gap-2">
-              <select
-                value={sort}
-                onChange={e => setSort(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"#aaa" }}
-              >
-                {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select>
+              </div>
+<div className="relative">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="lg:hidden shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium"
@@ -202,6 +202,18 @@ export default function MoviesPage() {
                 </svg>
                 Filter
               </button>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* <select
+                value={sort}
+                onChange={e => setSort(e.target.value)}
+                className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm outline-none"
+                style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"#aaa" }}
+              >
+                {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select> */}
+              
             </div>
           </div>
         </div>
@@ -228,10 +240,10 @@ export default function MoviesPage() {
               <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
                 style={{ background:"rgba(201,168,53,0.12)", border:"1px solid rgba(201,168,53,0.3)", color:"#c9a835" }}>
                 "{search}"
-                <button onClick={() => setSearch("")} className="ml-1 hover:opacity-70">×</button>
+                <button onClick={() => { setSearchInput(""); setSearch(""); }} className="ml-1 hover:opacity-70">×</button>
               </span>
             )}
-            <button onClick={() => { setGenre("All"); setQuality("All"); setSearch(""); }}
+            <button onClick={() => { setGenre("All"); setQuality("All"); setSearchInput(""); setSearch(""); }}
               className="text-xs transition-colors" style={{ color:"#666" }}
               onMouseEnter={e => (e.currentTarget.style.color = "#e50914")}
               onMouseLeave={e => (e.currentTarget.style.color = "#666")}>
@@ -318,7 +330,7 @@ export default function MoviesPage() {
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <div className="text-5xl">🎬</div>
               <p className="text-lg font-semibold" style={{ color:"#555" }}>No movies found</p>
-              <button onClick={() => { setGenre("All"); setQuality("All"); setSearch(""); }}
+              <button onClick={() => { setGenre("All"); setQuality("All"); setSearchInput(""); setSearch(""); }}
                 className="px-6 py-2 rounded-lg text-sm font-semibold"
                 style={{ background:"linear-gradient(135deg,#c9a835,#8a6e1a)", color:"#0d0d12" }}>
                 Clear Filters

@@ -1,18 +1,14 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import Navbar from "./components/Navbar";
 import HeroSlider from "./components/HeroSlider";
 import MovieRow from "./components/MovieRow";
 import Footer from "./components/Footer";
 import { trendingMovies, newReleases, actionMovies, topRated, horrorMovies, type Movie } from "./data/movies";
-import { fetchTrendingMovies, fetchMovies, getMovieRating, type ApiMovie } from "./lib/api";
+import { fetchTrendingMovies, fetchMovies, fetchSliderMovies, getMovieRating, type ApiMovie } from "./lib/api";
 
 const genres = ["All", "Action", "Drama", "Sci-Fi", "Horror", "Comedy", "Romance", "Thriller", "Animation", "Fantasy"];
 
 function apiToMovie(m: ApiMovie): Movie {
   const { average: ratingVal } = getMovieRating(m);
-
   return {
     id: m.id,
     slug: m.slug,
@@ -33,72 +29,46 @@ function apiToMovie(m: ApiMovie): Movie {
   };
 }
 
-function RowSkeleton() {
-  return (
-    <div className="flex gap-4 overflow-hidden">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="shrink-0 rounded-xl animate-pulse"
-          style={{ width: 160, height: 240, background: "rgba(255,255,255,0.06)" }} />
-      ))}
-    </div>
-  );
-}
+export default async function Home() {
+  // All fetches run in parallel on the server — page HTML arrives pre-rendered
+  const [sliderMovies, trendingData, newRelsData, actionData, horrorData, topData] =
+    await Promise.allSettled([
+      fetchSliderMovies(),
+      fetchTrendingMovies(),
+      fetchMovies({ sort: "newest", per_page: "20" }),
+      fetchMovies({ genre: "action", per_page: "20" }),
+      fetchMovies({ genre: "horror", per_page: "20" }),
+      fetchMovies({ sort: "rating", per_page: "20" }),
+    ]);
 
-export default function Home() {
-  const [newRels, setNewRels] = useState<Movie[]>(newReleases);
-  const [trending, setTrending] = useState<Movie[]>(trendingMovies);
-  const [action, setAction] = useState<Movie[]>(actionMovies);
-  const [horror, setHorror] = useState<Movie[]>(horrorMovies);
-  const [top, setTop] = useState<Movie[]>(topRated);
-  const [loading, setLoading] = useState(true);
+  const resolve = <T,>(result: PromiseSettledResult<T[]>, fallback: T[]): T[] =>
+    result.status === "fulfilled" && result.value.length ? result.value : fallback;
 
-  useEffect(() => {
-    let cancelled = false;
+  const sliders  = resolve(sliderMovies,  [] as ApiMovie[]);
+  const trending = resolve(trendingData,  [] as ApiMovie[]).map(apiToMovie);
+  const newRels  = resolve(newRelsData,   [] as ApiMovie[]).map(apiToMovie);
+  const action   = resolve(actionData,    [] as ApiMovie[]).map(apiToMovie);
+  const horror   = resolve(horrorData,    [] as ApiMovie[]).map(apiToMovie);
+  const top      = resolve(topData,       [] as ApiMovie[]).map(apiToMovie);
 
-    async function load() {
-      try {
-        const [trendData, newestData, actionData, horrorData, topData] = await Promise.allSettled([
-          fetchTrendingMovies(),
-          fetchMovies({ sort: "newest", per_page: "20" }),
-          fetchMovies({ genre: "action", per_page: "20" }),
-          fetchMovies({ genre: "horror", per_page: "20" }),
-          fetchMovies({ sort: "rating", per_page: "20" }),
-        ]);
-
-        if (cancelled) return;
-
-        if (trendData.status === "fulfilled" && trendData.value.length)
-          setTrending(trendData.value.map(apiToMovie));
-        if (newestData.status === "fulfilled" && newestData.value.length)
-          setNewRels(newestData.value.map(apiToMovie));
-        if (actionData.status === "fulfilled" && actionData.value.length)
-          setAction(actionData.value.map(apiToMovie));
-        if (horrorData.status === "fulfilled" && horrorData.value.length)
-          setHorror(horrorData.value.map(apiToMovie));
-        if (topData.status === "fulfilled" && topData.value.length)
-          setTop(topData.value.map(apiToMovie));
-      } catch {
-        /* keep static fallback */
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  // Use static fallback data when API has no results
+  const trendingMoviesDisplay = trending.length  ? trending  : trendingMovies;
+  const newRelsDisplay        = newRels.length   ? newRels   : newReleases;
+  const actionDisplay         = action.length    ? action    : actionMovies;
+  const horrorDisplay         = horror.length    ? horror    : horrorMovies;
+  const topDisplay            = top.length       ? top       : topRated;
 
   return (
     <div className="min-h-screen" style={{ background: "#0d0d12" }}>
       <Navbar />
 
-      <div className="pt-24">
-        <HeroSlider />
+      <div className="relative pt-16 md:pt-24">
+        <HeroSlider initialMovies={sliders} />
       </div>
 
       {/* Genre filter bar */}
       <div
-        className="sticky top-14 z-40 px-4 sm:px-6 lg:px-12 py-3 flex items-center gap-2.5 overflow-x-auto hide-scrollbar"
+        className="top-14 z-40 px-4 sm:px-6 lg:px-12 py-3 flex items-center gap-2.5 overflow-x-auto hide-scrollbar"
         style={{
           background: "rgba(13,13,18,0.95)",
           backdropFilter: "blur(14px)",
@@ -121,23 +91,23 @@ export default function Home() {
         ))}
       </div>
 
-      {/* Content rows */}
-      <div className="px-4 sm:px-6 lg:px-12 pt-10 space-y-12">
-        {loading ? (
-          <>
-            <RowSkeleton />
-            <RowSkeleton />
-            <RowSkeleton />
-          </>
-        ) : (
-          <>
-            <MovieRow title="New Releases" movies={newRels} />
-            <MovieRow title="Trending Now" movies={trending} />
-            <MovieRow title="Action & Adventure" movies={action} />
-            <MovieRow title="Horror & Suspense" movies={horror} />
-            <MovieRow title="Top Rated" movies={top} />
-          </>
-        )}
+      {/* Content rows — pre-rendered on server, no loading flash */}
+      <div className="px-4 sm:px-6 lg:px-12 pt-2 space-y-6">
+        <div className="re" style={{ background: "rgba(13,13,18,0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(201,168,53,0.1)" }}>
+          <MovieRow title="New Releases" movies={newRelsDisplay} />
+        </div>
+        <div className="relative" style={{ background: "rgba(13,13,18,0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(201,168,53,0.1)" }}>
+          <MovieRow title="Trending Now" movies={trendingMoviesDisplay} />
+        </div>
+        <div className="relative" style={{ background: "rgba(13,13,18,0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(201,168,53,0.1)" }}>
+          <MovieRow title="Action & Adventure" movies={actionDisplay} />
+        </div>
+        <div className="relative" style={{ background: "rgba(13,13,18,0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(201,168,53,0.1)" }}>
+          <MovieRow title="Horror & Suspense" movies={horrorDisplay} />
+        </div>
+        <div className="relative" style={{ background: "rgba(13,13,18,0.95)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(201,168,53,0.1)" }}>
+          <MovieRow title="Top Rated" movies={topDisplay} />
+        </div>
       </div>
 
       <div className="gold-divider mx-4 sm:mx-6 lg:mx-12 mt-12 mb-2" />
