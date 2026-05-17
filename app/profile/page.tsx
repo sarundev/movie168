@@ -5,7 +5,7 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
 import {
-  fetchMe, fetchMyPurchases, fetchWatchHistory,
+  fetchMe, fetchMyPurchases, fetchWatchHistory, fetchCreditBalance,
   type ApiUser, type ApiPurchase, type ApiWatchHistory,
 } from "../lib/api";
 
@@ -189,9 +189,10 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<"history" | "saved" | "settings">("history");
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
 
-  const [profile, setProfile]     = useState<ApiUser | null>(null);
-  const [history, setHistory]     = useState<ApiWatchHistory[]>([]);
+  const [profile,   setProfile]   = useState<ApiUser | null>(null);
+  const [history,   setHistory]   = useState<ApiWatchHistory[]>([]);
   const [purchases, setPurchases] = useState<ApiPurchase[]>([]);
+  const [credits,   setCredits]   = useState<number>(0);
   const [loadingData, setLoadingData] = useState(true);
 
   useEffect(() => {
@@ -200,17 +201,18 @@ export default function ProfilePage() {
       fetchMe(user.token),
       fetchWatchHistory(user.token),
       fetchMyPurchases(user.token),
-    ]).then(([p, h, pur]) => {
+      fetchCreditBalance(user.token),
+    ]).then(([p, h, pur, bal]) => {
       if (p.status   === "fulfilled") setProfile(p.value);
       if (h.status   === "fulfilled") setHistory(h.value);
       if (pur.status === "fulfilled") setPurchases(pur.value);
+      if (bal.status === "fulfilled") setCredits(bal.value.credits);
     }).finally(() => setLoadingData(false));
   }, [user]);
 
   const displayName  = profile?.name  ?? user?.name  ?? "Guest";
   const displayEmail = profile?.email ?? user?.email ?? "";
   const plan         = profile?.plan ?? "Free";
-  const balance      = profile?.balance ?? 0;
   const totalWatched = profile?.total_watched ?? history.length;
   const totalBuy     = profile?.total_purchases ?? purchases.length;
 
@@ -309,11 +311,17 @@ export default function ProfilePage() {
                   <path d="M20 12V7H4v13h16v-5"/><path d="M20 12a2 2 0 0 0-4 0 2 2 0 0 0 4 0Z"/>
                 </svg>
               </div>
-              <span className="text-xs font-semibold" style={{ color: "#888" }}>ទឹកប្រាក់</span>
+              <span className="text-xs font-semibold" style={{ color: "#888" }}>Credits</span>
             </div>
             <div>
-              <p className="text-3xl font-black leading-none" style={{ color: "#c9a835" }}>${balance}</p>
-              <p className="text-[10px] mt-1" style={{ color: "#555" }}>{(balance * 4000).toLocaleString()} ៛</p>
+              {loadingData ? (
+                <div className="h-8 w-16 rounded animate-pulse" style={{ background: "rgba(201,168,53,0.15)" }} />
+              ) : (
+                <>
+                  <p className="text-3xl font-black leading-none" style={{ color: "#c9a835" }}>{credits}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "#555" }}>≈ ${credits.toFixed(2)} USD</p>
+                </>
+              )}
             </div>
           </div>
 

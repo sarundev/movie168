@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Kantumruy_Pro } from "next/font/google";
 import "./globals.css";
-import MobileBottomNav from "./components/MobileBottomNav";
 import { AuthProvider } from "./context/AuthContext";
+import ClientMobileBottomNav from "./components/ClientMobileBottomNav";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,13 +29,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="km" className={`${geistSans.variable} ${kantumruy.variable} h-full`}>
+      <head>
+        <link rel="preconnect" href="https://image.tmdb.org" />
+        <link rel="preconnect" href="https://streaming-backend-hldchiyj.on-forge.com" />
+        <link rel="dns-prefetch" href="https://image.tmdb.org" />
+      </head>
       <body className="bg-[#09090b] text-white min-h-full antialiased" suppressHydrationWarning>
         {/* Extra bottom padding on mobile so content clears the nav bar */}
         <AuthProvider>
           <div className="lg:pb-0 pb-20">
             {children}
           </div>
-          <MobileBottomNav />
+          <ClientMobileBottomNav />
         </AuthProvider>
       </body>
     </html>

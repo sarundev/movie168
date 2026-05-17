@@ -64,6 +64,7 @@ export interface ApiMovie {
   subtitles?: unknown[];
   comments_count?: number;
   related_movies?: ApiMovie[];
+  playback_session_token?: string;
 
   // fallback fields
   badge?: string;
@@ -158,7 +159,7 @@ export class ApiError extends Error {
 
 // In-memory cache for client-side requests (server-side uses Next.js Data Cache)
 const _cache = new Map<string, { data: unknown; ts: number }>();
-const CACHE_TTL = 300_000; // 5 minutes
+const CACHE_TTL = 60_000; // 60 seconds — short enough to show fresh posters after navigation
 
 async function req<T>(
   url: string,
@@ -181,8 +182,11 @@ async function req<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  // Server-side GET requests use Next.js Data Cache (revalidate every 5 min)
-  const nextOptions = isGet && !isClient ? { next: { revalidate: 300 } } : {};
+  // Authenticated server-side requests: never cache (user-specific, may change after purchase/login).
+  // Public server-side GETs: Next.js Data Cache, revalidate every 60 s for fresh posters/data.
+  const nextOptions: RequestInit = isGet && !isClient
+    ? (token ? { cache: "no-store" } : { next: { revalidate: 60 } })
+    : {};
 
   const res = await fetch(url, { ...options, headers, ...nextOptions });
   if (!res.ok) {
@@ -220,8 +224,8 @@ export async function fetchTrendingMovies(): Promise<ApiMovie[]> {
   return Array.isArray(data) ? data : (data as { data: ApiMovie[] }).data ?? [];
 }
 
-export async function fetchMovieDetail(slug: string): Promise<ApiMovie> {
-  const data = await req<{ data: ApiMovie } | ApiMovie>(API.movies.detail(slug));
+export async function fetchMovieDetail(slug: string, token?: string): Promise<ApiMovie> {
+  const data = await req<{ data: ApiMovie } | ApiMovie>(API.movies.detail(slug), {}, token);
   return (data as { data: ApiMovie }).data ?? (data as ApiMovie);
 }
 
@@ -270,6 +274,19 @@ export async function removeCommentReaction(commentId: number | string, token: s
   await req(API.comments.reaction(commentId), { method: "DELETE" }, token);
 }
 
+export async function replyComment(
+  commentId: number | string,
+  body: string,
+  token: string,
+): Promise<ApiComment> {
+  const data = await req<{ data: ApiComment } | ApiComment>(
+    API.comments.reply(commentId),
+    { method: "POST", body: JSON.stringify({ body }) },
+    token,
+  );
+  return (data as { data: ApiComment }).data ?? (data as ApiComment);
+}
+
 export async function reportContent(
   payload: { type: "movie" | "comment"; target_id: number; reason: string },
   token: string,
@@ -282,6 +299,17 @@ export async function reportContent(
 export async function fetchMe(token: string): Promise<ApiUser> {
   const data = await req<{ data: ApiUser } | ApiUser>(API.me.profile, {}, token);
   return (data as { data: ApiUser }).data ?? (data as ApiUser);
+}
+
+export async function fetchCreditBalance(token: string): Promise<{ balance: number; credits: number }> {
+  const data = await req<{ data?: { balance?: number; credits?: number }; balance?: number; credits?: number }>(
+    API.me.balance, {}, token,
+  );
+  const inner = (data as { data?: { balance?: number; credits?: number } }).data ?? data;
+  return {
+    balance: inner.balance ?? 0,
+    credits: inner.credits ?? inner.balance ?? 0,
+  };
 }
 
 export async function fetchMyPurchases(token: string): Promise<ApiPurchase[]> {
@@ -335,4 +363,56 @@ export async function updatePlaybackProgress(
 export async function fetchPublicSettings(): Promise<ApiPublicSettings> {
   const data = await req<{ data: ApiPublicSettings } | ApiPublicSettings>(API.settings.public);
   return (data as { data: ApiPublicSettings }).data ?? (data as ApiPublicSettings);
+}
+
+// ─── Payments ────────────────────────────────────────────────────────────────
+
+export interface ApiPaymentCreate {
+  payment_url?: string;
+  qr_data?: string;
+  transaction_id?: string;
+}
+
+export interface ApiPaymentStatus {
+  transaction_id: string;
+  status: "pending" | "success" | "failed" | "expired";
+  amount?: number;
+  currency?: string;
+  paid_at?: string | null;
+}
+
+export async function createPaywayPayment(
+  payload: Record<string, unknown>,
+  token: string,
+): Promise<ApiPaymentCreate> {
+  const data = await req<{ data: ApiPaymentCreate } | ApiPaymentCreate>(
+    API.payment.create,
+    { method: "POST", body: JSON.stringify(payload) },
+    token,
+  );
+  return (data as { data: ApiPaymentCreate }).data ?? (data as ApiPaymentCreate);
+}
+
+export async function createKhqrPayment(
+  payload: Record<string, unknown>,
+  token: string,
+): Promise<ApiPaymentCreate> {
+  const data = await req<{ data: ApiPaymentCreate } | ApiPaymentCreate>(
+    API.payment.khqrCreate,
+    { method: "POST", body: JSON.stringify(payload) },
+    token,
+  );
+  return (data as { data: ApiPaymentCreate }).data ?? (data as ApiPaymentCreate);
+}
+
+export async function fetchPaymentStatus(
+  transactionId: string,
+  token: string,
+): Promise<ApiPaymentStatus> {
+  const data = await req<{ data: ApiPaymentStatus } | ApiPaymentStatus>(
+    API.payment.status(transactionId),
+    {},
+    token,
+  );
+  return (data as { data: ApiPaymentStatus }).data ?? (data as ApiPaymentStatus);
 }

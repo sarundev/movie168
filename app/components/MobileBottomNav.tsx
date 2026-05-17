@@ -33,18 +33,10 @@ const ProfileIcon = () => (
   </svg>
 );
 
-const LoginIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
-    <polyline points="10 17 15 12 10 7"/>
-    <line x1="15" x2="3" y1="12" y2="12"/>
-  </svg>
-);
-
 /* ─── Component ──────────────────────────────────────── */
 export default function MobileBottomNav() {
   const pathname = usePathname();
-  const { user, logout, loading: authLoading } = useAuth();
+  const { user } = useAuth();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href.split("?")[0]);
@@ -101,26 +93,23 @@ export default function MobileBottomNav() {
             );
           })}
 
-          {/* Auth tab: Profile (logged in) or Login (guest) */}
-          {user ? (
-            /* ── Logged-in: profile link + avatar dot ── */
-            <a
-              href="/profile"
-              aria-label="គណនី"
-              className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1 relative"
-              style={{ color: isActive("/profile") ? "#c9a835" : "#4a4a55", textDecoration: "none" }}
-            >
-              {/* Gold active bar */}
-              <div
-                className="mnav-indicator"
-                style={{
-                  marginBottom: "2px",
-                  opacity:      isActive("/profile") ? 1 : 0,
-                  width:        isActive("/profile") ? "20px" : "0px",
-                  background:   "#c9a835",
-                }}
-              />
-              {/* Avatar with initials */}
+          {/* Profile tab — always shown */}
+          <a
+            href={user ? "/profile" : "/login"}
+            aria-label="គណនី"
+            className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1 relative"
+            style={{ color: (isActive("/profile") || isActive("/login")) ? "#c9a835" : "#4a4a55", textDecoration: "none" }}
+          >
+            <div
+              className="mnav-indicator"
+              style={{
+                marginBottom: "2px",
+                opacity:      (isActive("/profile") || isActive("/login")) ? 1 : 0,
+                width:        (isActive("/profile") || isActive("/login")) ? "20px" : "0px",
+                background:   "#c9a835",
+              }}
+            />
+            {user ? (
               <div className="relative" style={{ lineHeight: 0 }}>
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center text-[9px] font-black"
@@ -134,62 +123,18 @@ export default function MobileBottomNav() {
                 >
                   {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
-                {/* Online dot */}
                 <span
                   className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full"
                   style={{ background: "#22c55e", border: "1.5px solid rgba(10,10,13,0.96)" }}
                 />
               </div>
-              <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1 }}>
-                គណនី
-              </span>
-            </a>
-          ) : (
-            /* ── Guest: Login button ── */
-            <a
-              href="/login"
-              aria-label="ចូលគណនី"
-              className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1"
-              style={{ color: isActive("/login") ? "#c9a835" : "#4a4a55", textDecoration: "none" }}
-            >
-              <div
-                className="mnav-indicator"
-                style={{
-                  marginBottom: "2px",
-                  opacity:      isActive("/login") ? 1 : 0,
-                  width:        isActive("/login") ? "20px" : "0px",
-                  background:   "#c9a835",
-                }}
-              />
-              <div style={{ lineHeight: 0 }}><LoginIcon /></div>
-              <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1 }}>
-                ចូល
-              </span>
-            </a>
-          )}
-
-          {/* Logout tab — only when logged in (long-press style: just a quick tap) */}
-          {user && (
-            <button
-              onClick={logout}
-              disabled={authLoading}
-              aria-label="ចាកចេញ"
-              className="mnav-tab flex flex-col items-center justify-end flex-1 pb-3 gap-1"
-              style={{ color: "#4a4a55", background: "transparent", border: "none", cursor: "pointer" }}
-            >
-              <div className="mnav-indicator" style={{ marginBottom: "2px", opacity: 0, width: "0px" }} />
-              <div style={{ lineHeight: 0, color: authLoading ? "#333" : "#ef4444" }}>
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                  <polyline points="16 17 21 12 16 7"/>
-                  <line x1="21" x2="9" y1="12" y2="12"/>
-                </svg>
-              </div>
-              <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1, color: authLoading ? "#333" : "#ef4444" }}>
-                {authLoading ? "..." : "ចាក"}
-              </span>
-            </button>
-          )}
+            ) : (
+              <div style={{ lineHeight: 0 }}><ProfileIcon /></div>
+            )}
+            <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1 }}>
+              គណនី
+            </span>
+          </a>
 
         </div>
       </nav>

@@ -1,17 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import Image from "next/image";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import MovieRow from "../../components/MovieRow";
-import { useAuth } from "../../context/AuthContext";
 import {
-  fetchComments, postComment, rateMovie,
+  postComment, rateMovie,
   reactComment, removeCommentReaction, reportContent,
-  getMovieRating, canWatchMovie,
+  getMovieRating,
   type ApiMovie, type ApiComment,
 } from "../../lib/api";
+import type { ServerUser } from "../../lib/server-auth";
+import { buildPlaybackUrl } from "../../lib/player";
 import { allMovies, type Movie } from "../../data/movies";
+import KhqrPayModal from "../../components/KhqrPayModal";
+import { preparePurchaseKhqrAction, purchaseWithBalanceAction } from "../../actions/movie-actions";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -78,12 +82,12 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
       if (myReaction === type) {
         await removeCommentReaction(comment.id, token);
         setMyReaction(null);
-        type === "like" ? setLikes(l => l - 1) : setDislikes(d => d - 1);
+        if (type === "like") setLikes(l => l - 1); else setDislikes(d => d - 1);
       } else {
-        if (myReaction) myReaction === "like" ? setLikes(l => l - 1) : setDislikes(d => d - 1);
+        if (myReaction) { if (myReaction === "like") setLikes(l => l - 1); else setDislikes(d => d - 1); }
         await reactComment(comment.id, type, token);
         setMyReaction(type);
-        type === "like" ? setLikes(l => l + 1) : setDislikes(d => d + 1);
+        if (type === "like") setLikes(l => l + 1); else setDislikes(d => d + 1);
       }
     } catch {}
   }
@@ -113,6 +117,7 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
           <p className="text-sm leading-relaxed" style={{ color: "#bbb" }}>{comment.body}</p>
           <div className="flex items-center gap-1 mt-1 -ml-2">
             <button onClick={() => handleReact("like")}
+              aria-label={`Like (${likes})`}
               className="flex items-center gap-1 text-xs transition-colors px-2 py-1.5"
               style={{ color: myReaction === "like" ? "#c9a835" : "#555", touchAction: "manipulation" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -121,6 +126,7 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
               {likes}
             </button>
             <button onClick={() => handleReact("dislike")}
+              aria-label={`Dislike (${dislikes})`}
               className="flex items-center gap-1 text-xs transition-colors px-2 py-1.5"
               style={{ color: myReaction === "dislike" ? "#ef4444" : "#555", touchAction: "manipulation" }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -141,6 +147,7 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
           {replyOpen && (
             <div className="flex flex-col gap-2 mt-3">
               <input value={replyBody} onChange={e => setReplyBody(e.target.value)}
+                aria-label="ឆ្លើយតប"
                 placeholder="ឆ្លើយតប..." className="w-full px-3 py-2.5 rounded-lg text-sm outline-none"
                 style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f0f0f0" }}
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitReply(); }}} />
@@ -165,12 +172,24 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
   );
 }
 
-// ─── Client Component ─────────────────────────────────────────────────────────
+// ─── Main client component ────────────────────────────────────────────────────
 
-export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; slug: string }) {
-  const { user } = useAuth();
+export default function MovieDetailClient({
+  movie,
+  slug,
+  user,
+  initialComments,
+  sessionToken,
+}: {
+  movie: ApiMovie;
+  slug: string;
+  user: ServerUser | null;
+  initialComments: ApiComment[];
+  sessionToken: string | null;
+}) {
+  const token = user?.token;
 
-  const [comments,     setComments]     = useState<ApiComment[]>([]);
+  const [comments,     setComments]     = useState<ApiComment[]>(initialComments);
   const [myRating,     setMyRating]     = useState(0);
   const [ratingDone,   setRatingDone]   = useState(false);
   const [newComment,   setNewComment]   = useState("");
@@ -179,26 +198,46 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
   const [reportReason, setReportReason] = useState("");
   const [reportSent,   setReportSent]   = useState(false);
 
-  // Load comments after paint — doesn't block the pre-rendered movie content
-  useEffect(() => {
-    let cancelled = false;
-    fetchComments(movie.id)
-      .then(c => { if (!cancelled) setComments(c); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [movie.id]);
+  const [backdropErr,  setBackdropErr]  = useState(false);
+  const [miniPosterErr,setMiniPosterErr]= useState(false);
+
+  type KhqrModal = { paymentUrl: string; transactionId: string; amount: string };
+  const [khqrModal,    setKhqrModal]    = useState<KhqrModal | null>(null);
+  const [buyingKhqr,   setBuyingKhqr]   = useState(false);
+  const [buyingBal,    setBuyingBal]    = useState(false);
+  const [buyMsg,       setBuyMsg]       = useState<string | null>(null);
+
+  async function handleBuyKhqr() {
+    setBuyingKhqr(true); setBuyMsg(null);
+    const res = await preparePurchaseKhqrAction(slug);
+    setBuyingKhqr(false);
+    if (res.ok && res.data) {
+      const d = res.data as { payment_url?: string; transaction_id?: string; amount?: number };
+      setKhqrModal({ paymentUrl: d.payment_url ?? "", transactionId: d.transaction_id ?? "", amount: `$${d.amount ?? ""}` });
+    } else {
+      setBuyMsg(res.message ?? "Could not create payment.");
+    }
+  }
+
+  async function handleBuyBalance() {
+    setBuyingBal(true); setBuyMsg(null);
+    const res = await purchaseWithBalanceAction(slug);
+    setBuyingBal(false);
+    if (res.ok) { window.location.reload(); }
+    else { setBuyMsg(res.message ?? "Purchase failed."); }
+  }
 
   async function submitRating(val: number) {
-    if (!user) return;
+    if (!token) return;
     setMyRating(val);
-    try { await rateMovie(movie.id, val, user.token); setRatingDone(true); } catch {}
+    try { await rateMovie(movie.id, val, token); setRatingDone(true); } catch {}
   }
 
   async function submitComment() {
-    if (!user || !newComment.trim()) return;
+    if (!token || !newComment.trim()) return;
     setPosting(true);
     try {
-      const c = await postComment(movie.id, newComment.trim(), user.token);
+      const c = await postComment(movie.id, newComment.trim(), token);
       setComments(prev => [c, ...prev]);
       setNewComment("");
     } catch {} finally { setPosting(false); }
@@ -209,9 +248,9 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
   }
 
   async function submitReport() {
-    if (!user || !reportReason.trim()) return;
+    if (!token || !reportReason.trim()) return;
     try {
-      await reportContent({ type: "movie", target_id: movie.id, reason: reportReason }, user.token);
+      await reportContent({ type: "movie", target_id: movie.id, reason: reportReason }, token);
       setReportSent(true);
       setTimeout(() => setReportOpen(false), 2000);
     } catch {}
@@ -223,12 +262,12 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
   const { average: ratingAvg, count: ratingCount } = getMovieRating(movie);
   const genreNames: string[] = (movie.genres ?? []).map(g => g.name);
   const castNames:  string[] = (movie.casts ?? []).map(c => c.name);
+  const requiresPurchase = movie.purchase?.requires_purchase ?? movie.requires_purchase ?? false;
 
   const releaseYear = movie.release_year
     ?? (movie.release_date ? new Date(movie.release_date).getFullYear() : undefined);
   const runtime = movie.runtime_minutes
     ? `${Math.floor(movie.runtime_minutes / 60)}h ${movie.runtime_minutes % 60}m` : undefined;
-  const canWatch = canWatchMovie(movie);
   const defaultSource = movie.sources?.find(s => s.is_default && s.can_watch)
     ?? movie.sources?.find(s => s.can_watch);
   const related: Movie[] = (movie.related_movies ?? []).length > 0
@@ -244,14 +283,16 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
 
   return (
     <div className="min-h-screen md:pt-4 pt-20" style={{ background: "#111116" }}>
+
       <Navbar />
 
       {/* ── Player section ── */}
       <div style={{ background: "#000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="relative w-full mx-auto" style={{ maxWidth: "1350px", aspectRatio: "16/9" }}>
-          {defaultSource?.embed_url && user ? (
+          {sessionToken && user ? (
             <iframe
-              src={defaultSource.embed_url}
+              src={buildPlaybackUrl({ sessionToken, movieSlug: slug, sourceId: defaultSource?.id })}
+              title={movie.title}
               className="absolute inset-0 w-full h-full"
               style={{ border: "none" }}
               allowFullScreen
@@ -259,11 +300,16 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
             />
           ) : (
             <>
-              {poster && (
-                <img src={poster} alt={movie.title}
-                  className="absolute inset-0 w-full h-full object-cover"
+              {poster && !backdropErr && (
+                <Image
+                  src={poster}
+                  alt={movie.title}
+                  fill
+                  priority
+                  className="object-cover"
                   style={{ filter: "brightness(0.35)" }}
-                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  sizes="100vw"
+                  onError={() => setBackdropErr(true)}
                 />
               )}
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-4 text-center">
@@ -284,6 +330,29 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
                         boxShadow: "0 4px 20px rgba(201,168,53,0.35)" }}>
                       ចូលគណនី
                     </a>
+                  </>
+                ) : requiresPurchase ? (
+                  <>
+                    <p className="text-sm font-semibold" style={{ color: "#bbb" }}>
+                      រឿងនេះត្រូវការទូទាត់ · {movie.price ? `$${movie.price}` : ""}
+                    </p>
+                    {buyMsg && <p className="text-xs" style={{ color: "#ef4444" }}>{buyMsg}</p>}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button onClick={handleBuyKhqr} disabled={buyingKhqr || buyingBal}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 flex items-center gap-2"
+                        style={{ background: "linear-gradient(135deg,#c9a835,#8a6e1a)", color: "#0d0d12",
+                          boxShadow: "0 4px 20px rgba(201,168,53,0.35)", cursor: buyingKhqr ? "not-allowed" : "pointer" }}>
+                        {buyingKhqr && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
+                        ទិញដោយ KHQR
+                      </button>
+                      <button onClick={handleBuyBalance} disabled={buyingKhqr || buyingBal}
+                        className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-80 flex items-center gap-2"
+                        style={{ background: "rgba(201,168,53,0.1)", border: "1px solid rgba(201,168,53,0.4)", color: "#c9a835",
+                          cursor: buyingBal ? "not-allowed" : "pointer" }}>
+                        {buyingBal && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
+                        ទិញដោយ Credit
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <p className="text-sm" style={{ color: "#666" }}>មិនទាន់មានប្រភព</p>
@@ -327,9 +396,16 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
               <div className="flex gap-4">
                 <div className="relative rounded-lg overflow-hidden shrink-0"
                   style={{ width: "90px", aspectRatio: "2/3", background: "#2a2a35" }}>
-                  {miniPoster && (
-                    <img src={miniPoster} alt={movie.title} className="absolute inset-0 w-full h-full object-cover"
-                      onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                  {miniPoster && !miniPosterErr && (
+                    <Image
+                      src={miniPoster}
+                      alt={movie.title}
+                      fill
+                      priority
+                      className="object-cover"
+                      sizes="90px"
+                      onError={() => setMiniPosterErr(true)}
+                    />
                   )}
                   {movie.quality && (
                     <span className="absolute bottom-1 left-1 text-[8px] font-black px-1 py-0.5 rounded"
@@ -488,6 +564,7 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
                   </div>
                   <div className="flex-1 flex flex-col gap-2">
                     <textarea value={newComment} onChange={e => setNewComment(e.target.value)}
+                      aria-label="សរសេរមតិ"
                       placeholder="សរសេរមតិ..." rows={2}
                       className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none"
                       style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.09)", color: "#f0f0f0" }} />
@@ -513,7 +590,7 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
               ) : (
                 <div className="space-y-1">
                   {comments.map((c, i) => (
-                    <CommentItem key={c.id ?? i} comment={c} movieId={movie.id} token={user?.token} onReplyAdded={handleReplyAdded} />
+                    <CommentItem key={c.id ?? i} comment={c} movieId={movie.id} token={token} onReplyAdded={handleReplyAdded} />
                   ))}
                 </div>
               )}
@@ -543,7 +620,9 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
                     <div className="relative rounded-lg overflow-hidden"
                       style={{ width: "68px", height: "95px", background: "#2a2a35" }}>
                       {m.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.image} alt={m.title} className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
                           onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                       )}
                     </div>
@@ -562,7 +641,9 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
                     <div className="relative rounded-lg overflow-hidden shrink-0"
                       style={{ width: "56px", height: "78px", background: "#2a2a35" }}>
                       {m.image && (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={m.image} alt={m.title} className="absolute inset-0 w-full h-full object-cover"
+                          loading="lazy"
                           onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                       )}
                     </div>
@@ -583,6 +664,18 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
       <div className="gold-divider mx-4 sm:mx-6 lg:mx-12 mb-2" />
       <Footer />
 
+      {/* KHQR buy modal */}
+      {khqrModal && (
+        <KhqrPayModal
+          paymentUrl={khqrModal.paymentUrl}
+          transactionId={khqrModal.transactionId}
+          amount={khqrModal.amount}
+          label={movie.title}
+          onSuccess={() => { setKhqrModal(null); window.location.reload(); }}
+          onClose={() => setKhqrModal(null)}
+        />
+      )}
+
       {/* Report modal */}
       {reportOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
@@ -597,6 +690,7 @@ export default function MovieDetailClient({ movie, slug }: { movie: ApiMovie; sl
             ) : (
               <>
                 <textarea value={reportReason} onChange={e => setReportReason(e.target.value)}
+                  aria-label="ពណ៌នាបញ្ហា"
                   placeholder="ពណ៌នាបញ្ហា..." rows={4}
                   className="w-full px-4 py-3 rounded-xl text-sm outline-none resize-none mb-4"
                   style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#f0f0f0" }} />

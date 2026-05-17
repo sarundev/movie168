@@ -1,8 +1,35 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchMovieDetail } from "../../lib/api";
+import { fetchMovieDetail, fetchComments, type ApiMovie } from "../../lib/api";
+import { getServerUser } from "../../lib/server-auth";
 import { allMovies } from "../../data/movies";
-import type { ApiMovie } from "../../lib/api";
 import MovieDetailClient from "./MovieDetailClient";
+
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  try {
+    const movie = await fetchMovieDetail(slug);
+    const image = movie.backdrop_url ?? movie.poster_url ?? movie.thumbnail_url;
+    return {
+      title: `${movie.title} — 168NET`,
+      description: movie.overview ?? `Watch ${movie.title} online in HD on 168NET.`,
+      openGraph: {
+        title: movie.title,
+        description: movie.overview ?? "",
+        images: image ? [{ url: image, width: 1280, height: 720, alt: movie.title }] : [],
+        type: "video.movie",
+      },
+    };
+  } catch {
+    return { title: "168NET — Movie" };
+  }
+}
 
 function staticFallback(slug: string): ApiMovie | null {
   const numericId = parseInt(slug, 10);
@@ -36,15 +63,26 @@ export default async function MovieDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const user = await getServerUser();
 
   let movie: ApiMovie | null = null;
   try {
-    movie = await fetchMovieDetail(slug);
+    movie = await fetchMovieDetail(slug, user?.token);
   } catch {
     movie = staticFallback(slug);
   }
 
   if (!movie) notFound();
 
-  return <MovieDetailClient movie={movie} slug={slug} />;
+  const initialComments = await fetchComments(movie.id).catch(() => []);
+
+  return (
+    <MovieDetailClient
+      movie={movie}
+      slug={slug}
+      user={user}
+      initialComments={initialComments}
+      sessionToken={movie.playback_session_token ?? null}
+    />
+  );
 }

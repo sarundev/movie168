@@ -53,6 +53,7 @@ function SlideCard({ slide, priority = false }: { slide: Slide; priority?: boole
     >
       <div className="relative overflow-hidden" style={{ aspectRatio: "19/11" }}>
         {slide.image && (
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={slide.image}
             alt={slide.title}

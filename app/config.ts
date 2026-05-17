@@ -22,11 +22,13 @@ export const API = {
   },
 
   comments: {
+    reply:    (id: string | number) => `${R}/comments/${id}/reply`,
     reaction: (id: string | number) => `${R}/comments/${id}/reaction`,
   },
 
   me: {
     profile:      `${R}/me`,
+    balance:      `${R}/me/balance`,
     purchases:    `${R}/me/purchases`,
     watchHistory: `${R}/me/watch-history`,
   },
@@ -42,8 +44,10 @@ export const API = {
   },
 
   payment: {
-    create:   `${R}/payway/create-payment`,
-    callback: `${R}/payway/callback`,
+    create:     `${R}/payway/create-payment`,
+    khqrCreate: `${R}/khqrpay/create-payment`,
+    status:     (transactionId: string) => `${R}/payments/${transactionId}/status`,
+    callback:   `${R}/payway/callback`,
   },
 
   reports: `${R}/reports`,

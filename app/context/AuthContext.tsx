@@ -94,6 +94,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token: data.token ?? data.access_token ?? "",
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: authUser.token, user: authUser }),
+      });
       setUser(authUser);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "ចូលគណនីមិនបានសំរេច");
@@ -127,6 +132,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token: data.token ?? data.access_token ?? "",
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+      await fetch("/api/auth/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: authUser.token, user: authUser }),
+      });
       setUser(authUser);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "ចុះឈ្មោះមិនបានសំរេច");
@@ -150,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
     localStorage.removeItem(STORAGE_KEY);
+    await fetch("/api/auth/session", { method: "DELETE" });
     setUser(null);
     setLoading(false);
     window.location.href = "/";
