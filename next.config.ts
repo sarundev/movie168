@@ -17,16 +17,21 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
-    return [
-      {
-        source: "/_next/static/(.*)",
-        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
-      },
+    const rules = [
       {
         source: "/api/auth/(.*)",
         headers: [{ key: "Cache-Control", value: "no-store" }],
       },
     ];
+
+    if (process.env.NODE_ENV === "production") {
+      rules.unshift({
+        source: "/_next/static/(.*)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      });
+    }
+
+    return rules;
   },
 };
 

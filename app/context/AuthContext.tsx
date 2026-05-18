@@ -67,7 +67,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setUser(JSON.parse(raw));
+      if (raw) {
+        const authUser = JSON.parse(raw) as AuthUser;
+        setUser(authUser);
+        // Re-establish the httpOnly cookie so server actions can authenticate.
+        // The cookie may be missing (expired or cleared) even when localStorage still holds the token.
+        fetch("/api/auth/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: authUser.token, user: authUser }),
+        }).catch(() => {});
+      }
     } catch {}
   }, []);
 

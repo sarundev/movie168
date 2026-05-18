@@ -345,13 +345,13 @@ export default function MovieDetailClient({
                         {buyingKhqr && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
                         ទិញដោយ KHQR
                       </button>
-                      <button onClick={handleBuyBalance} disabled={buyingKhqr || buyingBal}
+                      {/* <button onClick={handleBuyBalance} disabled={buyingKhqr || buyingBal}
                         className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-80 flex items-center gap-2"
                         style={{ background: "rgba(201,168,53,0.1)", border: "1px solid rgba(201,168,53,0.4)", color: "#c9a835",
                           cursor: buyingBal ? "not-allowed" : "pointer" }}>
                         {buyingBal && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
                         ទិញដោយ Credit
-                      </button>
+                      </button> */}
                     </div>
                   </>
                 ) : (

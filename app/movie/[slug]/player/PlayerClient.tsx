@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { ApiMovieSource } from "../../../lib/api";
-import { updatePlaybackProgress } from "../../../lib/api";
+import { updatePlaybackProgress, fetchPlaybackProgress } from "../../../lib/api";
 import { buildPlaybackUrl, PLAYER_ORIGIN } from "../../../lib/player";
 import { trackMovieViewAction, saveWatchProgressAction } from "../../../actions/movie-actions";
 import { useAuth } from "../../../context/AuthContext";
@@ -102,12 +102,25 @@ export default function PlayerClient({
 
     const tick = setInterval(() => {
       elapsedSecondsRef.current += 10;
+
+      // If the player never emitted MOVIE_PLAY, track the view after 10 s as a fallback.
+      if (elapsedSecondsRef.current === 10 && !hasTrackedViewRef.current) {
+        hasTrackedViewRef.current = true;
+        trackMovieViewAction(movieId).catch(() => {});
+      }
     }, 10_000);
 
-    const save = setInterval(() => {
+    const save = setInterval(async () => {
       const position = elapsedSecondsRef.current;
       if (position < 10) return;
       updatePlaybackProgress(sessionToken, position, user.token).catch(() => {});
+      // Also persist to watch-history using the session's authoritative duration.
+      try {
+        const prog = await fetchPlaybackProgress(sessionToken, user.token);
+        if (prog.duration > 0) {
+          saveWatchProgressAction({ movieId, watchedSeconds: position, durationSeconds: prog.duration }).catch(() => {});
+        }
+      } catch {}
     }, 30_000);
 
     return () => {
@@ -119,7 +132,7 @@ export default function PlayerClient({
         updatePlaybackProgress(sessionToken, position, user.token).catch(() => {});
       }
     };
-  }, [sessionToken, user]);
+  }, [sessionToken, user, movieId]);
 
   return (
     <>
