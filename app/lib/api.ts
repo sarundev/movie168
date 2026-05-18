@@ -45,7 +45,7 @@ export interface ApiMovie {
 
   // Detail endpoint — nested flags/purchase
   flags?: { is_featured: boolean; is_slider: boolean; is_trending: boolean };
-  purchase?: { is_purchased: boolean; can_watch: boolean; requires_purchase: boolean };
+  purchase?: { is_purchased: boolean; can_watch: boolean; requires_purchase: boolean; available_payment_methods?: string[] };
   user_state?: { is_favorited: boolean; watch_progress: unknown };
 
   // List endpoints — flat flags
@@ -84,6 +84,8 @@ export function getMovieRating(m: ApiMovie): { average: number; count: number } 
 
 // Normalise can_watch from either nested purchase or flat field
 export function canWatchMovie(m: ApiMovie): boolean {
+  const isPurchased = m.purchase?.is_purchased ?? m.is_purchased ?? false;
+  if (isPurchased) return true;
   return m.purchase?.can_watch ?? m.can_watch ?? true;
 }
 
@@ -98,18 +100,53 @@ export interface ApiComment {
   created_at: string;
 }
 
-export interface ApiPlaybackSession {
-  token: string;
-  stream_url?: string;
-  embed_url?: string;
-  expires_at: string;
+export interface ApiEpisode {
+  id: number;
+  title: string;
+  slug?: string;
+  overview?: string;
+  episode_number: number;
+  season_number: number;
+  runtime_minutes?: number | null;
+  air_date?: string;
+  thumbnail_url?: string;
+  poster_url?: string;
 }
 
-export interface ApiProgress {
-  position: number;
-  duration: number;
-  percent: number;
-  completed: boolean;
+export interface ApiSeason {
+  id: number;
+  season_number: number;
+  title?: string;
+  overview?: string;
+  poster_url?: string;
+  air_date?: string;
+  episodes_count: number;
+  episodes: ApiEpisode[];
+}
+
+export interface ApiTvShow {
+  id: number;
+  slug: string;
+  title: string;
+  original_title?: string;
+  overview?: string;
+  poster_url?: string;
+  backdrop_url?: string;
+  thumbnail_url?: string;
+  release_year?: number;
+  quality?: string;
+  age_rating?: string | null;
+  rating?: { average: number | null; count: number };
+  vote_average?: number | null;
+  vote_count?: number;
+  genres?: { id: number; name: string; slug?: string }[];
+  people?: { id: number; name: string; slug?: string; profile_url?: string; role_type?: string; character_name?: string }[];
+  seasons: ApiSeason[];
+  seasons_count: number;
+  episodes_count: number;
+  access_type?: string;
+  requires_purchase?: boolean;
+  can_watch_public?: boolean;
 }
 
 export interface ApiPurchase {
@@ -131,18 +168,38 @@ export interface ApiUser {
   email: string;
   phone?: string;
   avatar?: string;
+  avatar_url?: string;
+  role?: string;
+  telegram_username?: string | null;
+  preferred_locale?: string;
+  is_active?: boolean;
   plan?: string;
   plan_expires_at?: string;
   balance?: number;
+  credit_balance?: number;
   total_watched?: number;
   total_purchases?: number;
   member_since?: string;
+  email_verified_at?: string;
+  created_at?: string;
 }
 
 export interface ApiPublicSettings {
   site_name?: string;
   currency?: string;
   plans?: { id: string; label: string; price: number; features: string[] }[];
+}
+
+export interface ApiGenre {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface ApiMovieFilters {
+  genres: ApiGenre[];
+  countries: { label: string; value: string }[];
+  qualities: { label: string; value: string }[];
 }
 
 // ─── API error ───────────────────────────────────────────────────────────────
@@ -225,7 +282,10 @@ export async function fetchTrendingMovies(): Promise<ApiMovie[]> {
 }
 
 export async function fetchMovieDetail(slug: string, token?: string): Promise<ApiMovie> {
-  const data = await req<{ data: ApiMovie } | ApiMovie>(API.movies.detail(slug), {}, token);
+  const url = token
+    ? `${API.movies.detail(slug)}?include_state=true&include_playback=true`
+    : API.movies.detail(slug);
+  const data = await req<{ data: ApiMovie } | ApiMovie>(url, {}, token);
   return (data as { data: ApiMovie }).data ?? (data as ApiMovie);
 }
 
@@ -267,7 +327,7 @@ export async function reactComment(
   reaction: "like" | "dislike",
   token: string,
 ): Promise<void> {
-  await req(API.comments.reaction(commentId), { method: "POST", body: JSON.stringify({ reaction }) }, token);
+  await req(API.comments.reaction(commentId), { method: "POST", body: JSON.stringify({ type: reaction }) }, token);
 }
 
 export async function removeCommentReaction(commentId: number | string, token: string): Promise<void> {
@@ -343,36 +403,18 @@ export async function preparePurchase(movieId: number | string, token: string): 
   return req(API.movies.purchase(movieId), { method: "POST" }, token);
 }
 
-// ─── Playback ────────────────────────────────────────────────────────────────
+// ─── TV Shows ────────────────────────────────────────────────────────────────
 
-export async function createPlaybackSession(movieId: number | string, token: string): Promise<ApiPlaybackSession> {
-  const data = await req<{ data: ApiPlaybackSession } | ApiPlaybackSession>(
-    API.playback.createSession(movieId),
-    { method: "POST" },
-    token,
-  );
-  return (data as { data: ApiPlaybackSession }).data ?? (data as ApiPlaybackSession);
+export async function fetchTvShow(slug: string, token?: string): Promise<ApiTvShow> {
+  const data = await req<{ data: ApiTvShow } | ApiTvShow>(API.tvShows.detail(slug), {}, token);
+  return (data as { data: ApiTvShow }).data ?? (data as ApiTvShow);
 }
 
-export async function fetchPlaybackProgress(token: string, authToken: string): Promise<ApiProgress> {
-  const data = await req<{ data: ApiProgress } | ApiProgress>(
-    API.playback.progress(token),
-    {},
-    authToken,
-  );
-  return (data as { data: ApiProgress }).data ?? (data as ApiProgress);
-}
+// ─── Filters ─────────────────────────────────────────────────────────────────
 
-export async function updatePlaybackProgress(
-  sessionToken: string,
-  position: number,
-  authToken: string,
-): Promise<void> {
-  await req(
-    API.playback.progress(sessionToken),
-    { method: "POST", body: JSON.stringify({ position }) },
-    authToken,
-  );
+export async function fetchMovieFilters(): Promise<ApiMovieFilters> {
+  const data = await req<{ data: ApiMovieFilters }>(API.filters);
+  return data.data;
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────

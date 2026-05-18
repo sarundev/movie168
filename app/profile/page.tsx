@@ -4,10 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuth } from "../context/AuthContext";
+import type { ApiUser, ApiPurchase, ApiWatchHistory } from "../lib/api";
+import ChangePasswordModal from "../components/ChangePasswordModal";
 import {
-  fetchMe, fetchMyPurchases, fetchWatchHistory, fetchCreditBalance, uploadAvatar,
-  type ApiUser, type ApiPurchase, type ApiWatchHistory,
-} from "../lib/api";
+  fetchProfileAction,
+  fetchWatchHistoryAction,
+  fetchMyPurchasesAction,
+  uploadAvatarAction,
+} from "../actions/profile-actions";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -194,42 +198,48 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<"history" | "saved" | "settings">("history");
   const [avatarSrc, setAvatarSrc] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
+  const [pwModalOpen,     setPwModalOpen]     = useState(false);
+  const [pwSuccess,       setPwSuccess]       = useState(false);
 
-  const [profile,   setProfile]   = useState<ApiUser | null>(null);
-  const [history,   setHistory]   = useState<ApiWatchHistory[]>([]);
-  const [purchases, setPurchases] = useState<ApiPurchase[]>([]);
-  const [credits,   setCredits]   = useState<number>(0);
+  const [profile,    setProfile]    = useState<ApiUser | null>(null);
+  const [history,    setHistory]    = useState<ApiWatchHistory[]>([]);
+  const [purchases,  setPurchases]  = useState<ApiPurchase[]>([]);
+  const [balanceAmt, setBalanceAmt] = useState<number>(0);
+  const [credits,    setCredits]    = useState<number>(0);
   const [loadingData, setLoadingData] = useState(true);
 
   const avatarStorageKey = user ? `avatar_${user.id ?? user.email}` : null;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!user) { setLoadingData(false); return; }
     // Restore locally-saved avatar immediately while API loads
     const local = avatarStorageKey ? localStorage.getItem(avatarStorageKey) : null;
     if (local) setAvatarSrc(local);
 
     Promise.allSettled([
-      fetchMe(user.token),
-      fetchWatchHistory(user.token),
-      fetchMyPurchases(user.token),
-      fetchCreditBalance(user.token),
-    ]).then(([p, h, pur, bal]) => {
-      if (p.status === "fulfilled") {
-        setProfile(p.value);
-        // Server avatar wins over local if present
-        if (p.value.avatar) setAvatarSrc(p.value.avatar);
+      fetchProfileAction(),
+      fetchWatchHistoryAction(),
+      fetchMyPurchasesAction(),
+    ]).then(([p, h, pur]) => {
+      if (p.status === "fulfilled" && p.value.ok && p.value.data) {
+        const prof = p.value.data;
+        setProfile(prof);
+        // API returns avatar_url; fallback to avatar for older responses
+        const src = prof.avatar_url ?? prof.avatar;
+        if (src) setAvatarSrc(src);
+        setBalanceAmt(prof.balance ?? 0);
+        setCredits(prof.credit_balance ?? 0);
       }
-      if (h.status   === "fulfilled") setHistory(h.value);
-      if (pur.status === "fulfilled") setPurchases(pur.value);
-      if (bal.status === "fulfilled") setCredits(bal.value.credits);
+      if (h.status   === "fulfilled" && h.value.ok)   setHistory(h.value.data ?? []);
+      if (pur.status === "fulfilled" && pur.value.ok) setPurchases(pur.value.data ?? []);
     }).finally(() => setLoadingData(false));
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleAvatarSelect(file: File) {
     if (!user) return;
     setAvatarUploading(true);
-    // Convert to base64 for local persistence
+
     const base64 = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result as string);
@@ -237,21 +247,21 @@ export default function ProfilePage() {
       reader.readAsDataURL(file);
     });
 
-    // Show preview immediately
     setAvatarSrc(base64);
-    // Save locally so it survives page refresh even if API fails
     if (avatarStorageKey) localStorage.setItem(avatarStorageKey, base64);
 
     try {
-      const updated = await uploadAvatar(file, user.token);
-      if (updated.avatar) {
-        setAvatarSrc(updated.avatar);
-        setProfile(prev => prev ? { ...prev, avatar: updated.avatar } : prev);
-        // Replace local base64 with the server URL
-        if (avatarStorageKey) localStorage.setItem(avatarStorageKey, updated.avatar);
+      const formData = new FormData();
+      formData.append("avatar", file);
+      const res = await uploadAvatarAction(formData);
+      const newAvatar = res.data?.avatar_url ?? res.data?.avatar;
+      if (res.ok && newAvatar) {
+        setAvatarSrc(newAvatar);
+        setProfile(prev => prev ? { ...prev, avatar_url: newAvatar } : prev);
+        if (avatarStorageKey) localStorage.setItem(avatarStorageKey, newAvatar);
       }
     } catch {
-      // API failed — local base64 already saved, so image persists on refresh
+      // local base64 already saved
     } finally {
       setAvatarUploading(false);
     }
@@ -328,7 +338,7 @@ export default function ProfilePage() {
             {/* Stats row */}
             {loadingData ? (
               <div className="flex justify-around">
-                {[1, 2, 3].map(i => (
+                {[1, 2, 3, 4].map(i => (
                   <div key={i} className="flex flex-col items-center gap-2">
                     <div className="h-6 w-12 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.07)" }} />
                     <div className="h-3 w-16 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
@@ -341,62 +351,86 @@ export default function ProfilePage() {
                 <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
                 <StatPill value={totalBuy} label="ចំនួនទិញ" accent="#a855f7" />
                 <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
-                <StatPill value={`$${credits.toFixed(2)}`} label="ចំនួនទឹកប្រាក់សរុប" accent="#a855f7" />
-
-                {/* <p className="text-xl font-black leading-none" style={{ color: "#c9a835" }}>${credits.toFixed(2)}</p> */}
-                  {/* <p className="text-[10px] mt-1" style={{ color: "#555" }}>≈ ${credits.toFixed(2)} USD</p> */}
+                <StatPill value={`$${balanceAmt.toFixed(2)}`} label="Balance" accent="#34d399" />
+                <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
+                <StatPill value={`$${credits.toFixed(2)}`} label="Credits" accent="#c9a835" />
               </div>
             )}
           </div>
         </div>
 
-        {/* ── Wallet + Top-up row ── */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {/* Balance */}
-          {/* <div className="rounded-2xl p-4 flex flex-col gap-3"
+        {/* ── Balance + Credits row ── */}
+        {/* <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="rounded-2xl p-4 flex flex-col gap-3"
+            style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.18)" }}>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl flex items-center justify-center"
+                style={{ background: "rgba(52,211,153,0.15)" }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 12V7H4v13h16v-5"/><path d="M20 12a2 2 0 0 0-4 0 2 2 0 0 0 4 0Z"/>
+                </svg>
+              </div>
+              <span className="text-xs font-semibold" style={{ color: "#6ee7b7" }}>Balance</span>
+            </div>
+            <div>
+              {loadingData ? (
+                <div className="h-8 w-16 rounded animate-pulse" style={{ background: "rgba(52,211,153,0.15)" }} />
+              ) : (
+                <>
+                  <p className="text-3xl font-black leading-none" style={{ color: "#34d399" }}>${balanceAmt.toFixed(2)}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "#6ee7b7a0" }}>USD Wallet</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-4 flex flex-col gap-3"
             style={{ background: "rgba(201,168,53,0.07)", border: "1px solid rgba(201,168,53,0.18)" }}>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl flex items-center justify-center"
                 style={{ background: "rgba(201,168,53,0.15)" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 12V7H4v13h16v-5"/><path d="M20 12a2 2 0 0 0-4 0 2 2 0 0 0 4 0Z"/>
+                  <circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
                 </svg>
               </div>
-              <span className="text-xs font-semibold" style={{ color: "#888" }}>Credits</span>
+              <span className="text-xs font-semibold" style={{ color: "#c9a835" }}>Credits</span>
             </div>
             <div>
               {loadingData ? (
                 <div className="h-8 w-16 rounded animate-pulse" style={{ background: "rgba(201,168,53,0.15)" }} />
               ) : (
                 <>
-                  <p className="text-3xl font-black leading-none" style={{ color: "#c9a835" }}>{credits}</p>
-                  <p className="text-[10px] mt-1" style={{ color: "#555" }}>≈ ${credits.toFixed(2)} USD</p>
+                  <p className="text-3xl font-black leading-none" style={{ color: "#c9a835" }}>${credits.toFixed(2)}</p>
+                  <p className="text-[10px] mt-1" style={{ color: "#c9a835a0" }}>Credit Balance</p>
                 </>
               )}
             </div>
-          </div> */}
+          </div>
+        </div> */}
 
-          {/* Top-up CTA */}
-          {/* <a href="/deposit" className="rounded-2xl p-4 flex flex-col justify-between group"
-            style={{ background: "linear-gradient(135deg,rgba(201,168,53,0.15),rgba(139,105,20,0.08))", border: "1px solid rgba(201,168,53,0.22)" }}>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{ background: "rgba(201,168,53,0.18)" }}>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </div>
-              <span className="text-xs font-semibold" style={{ color: "#888" }}>បន្ថែម</span>
+        {/* Top-Up CTA */}
+        <a href="/deposit"
+          className="rounded-2xl p-4 flex items-center justify-between group mb-6"
+          style={{ background: "linear-gradient(135deg,rgba(201,168,53,0.12),rgba(139,105,20,0.06))", border: "1px solid rgba(201,168,53,0.2)" }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{ background: "rgba(201,168,53,0.18)" }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
             </div>
             <div>
-              <p className="text-base font-black leading-none" style={{ color: "#c9a835" }}>Top Up</p>
-              <p className="text-[10px] mt-1" style={{ color: "#555" }}>ចូលប្រាក់ / Upgrade</p>
+              <p className="text-sm font-black leading-none" style={{ color: "#c9a835" }}>Top-Up Balance &amp; Credit</p>
+              <p className="text-[10px] mt-1" style={{ color: "#555" }}>ដាក់ប្រាក់តាម KHQR / ABA PayWay</p>
             </div>
-          </a> */}
-        </div>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m9 18 6-6-6-6"/>
+          </svg>
+        </a>
 
         {/* ── Plan banner ── */}
-        <div className="rounded-2xl px-5 py-4 mb-6 flex items-center gap-4"
+        {/* <div className="rounded-2xl px-5 py-4 mb-6 flex items-center gap-4"
           style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
           <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
             style={{ background: "rgba(201,168,53,0.1)" }}>
@@ -413,7 +447,7 @@ export default function ProfilePage() {
               ផុត {profile.plan_expires_at}
             </span>
           )}
-        </div>
+        </div> */}
 
         {/* ── Tabs ── */}
         <div className="grid grid-cols-3 gap-1.5 mb-6">
@@ -468,7 +502,7 @@ export default function ProfilePage() {
               <EmptyState message="មិនទាន់មានការទិញ" />
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-3" style={{ scrollbarWidth: "none" }}>
-                {purchases.map(p => (
+                {purchases.filter(p => p.movie != null).map(p => (
                   <MovieCard
                     key={p.id}
                     title={p.movie.title}
@@ -502,6 +536,7 @@ export default function ProfilePage() {
             <SettingsRow
               icon={<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
               label="ផ្លាស់ប្តូរពាក្យសម្ងាត់"
+              onClick={() => { setPwModalOpen(true); setPwSuccess(false); }}
             />
 
             {/* Divider */}
@@ -548,6 +583,25 @@ export default function ProfilePage() {
       </div>
 
       <Footer />
+
+      {pwModalOpen && (
+        <ChangePasswordModal
+          onSuccess={() => { setPwModalOpen(false); setPwSuccess(true); }}
+          onClose={() => setPwModalOpen(false)}
+        />
+      )}
+
+      {pwSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 pointer-events-none">
+          <div className="rounded-2xl px-6 py-4 flex items-center gap-3 pointer-events-auto"
+            style={{ background: "rgba(34,197,94,0.12)", border: "1px solid rgba(34,197,94,0.3)", boxShadow: "0 8px 32px rgba(0,0,0,0.5)" }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <p className="text-sm font-semibold" style={{ color: "#22c55e" }}>ពាក្យសម្ងាត់ត្រូវបានផ្លាស់ប្តូរដោយជោគជ័យ!</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,7 +6,6 @@ export const API = {
     login:    `${R}/auth/login`,
     register: `${R}/auth/register`,
     logout:   `${R}/auth/logout`,
-    me:       `${R}/auth/me`,
   },
 
   movies: {
@@ -21,6 +20,12 @@ export const API = {
     purchase: (id:   string | number) => `${R}/movies/${id}/purchase/prepare`,
   },
 
+  tvShows: {
+    detail:        (slug: string) => `${R}/tv-shows/${slug}`,
+    episodePlayer: (tvSlug: string, season: number, episode: number) =>
+      `${R}/tv-shows/${tvSlug}/seasons/${season}/episodes/${episode}/player`,
+  },
+
   comments: {
     reply:    (id: string | number) => `${R}/comments/${id}/reply`,
     reaction: (id: string | number) => `${R}/comments/${id}/reaction`,
@@ -28,17 +33,13 @@ export const API = {
 
   me: {
     profile:      `${R}/me`,
-    avatar:       `${R}/me/avatar`,
+    avatar:       `${R}/me/profile/avatar`,
     balance:      `${R}/me/balance`,
     purchases:    `${R}/me/purchases`,
     watchHistory: `${R}/me/watch-history`,
   },
 
-  playback: {
-    createSession: (movieId: string | number) => `${R}/playback/movies/${movieId}/session`,
-    session:       (token: string)            => `${R}/playback/sessions/${token}`,
-    progress:      (token: string)            => `${R}/playback/sessions/${token}/progress`,
-  },
+  filters: `${R}/movie-filters`,
 
   settings: {
     public: `${R}/settings/public`,

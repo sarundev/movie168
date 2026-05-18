@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import type { ApiMovieSource } from "../../../lib/api";
-import { updatePlaybackProgress, fetchPlaybackProgress } from "../../../lib/api";
 import { buildPlaybackUrl, PLAYER_ORIGIN } from "../../../lib/player";
 import { trackMovieViewAction, saveWatchProgressAction } from "../../../actions/movie-actions";
 import { useAuth } from "../../../context/AuthContext";
@@ -110,26 +109,18 @@ export default function PlayerClient({
       }
     }, 10_000);
 
-    const save = setInterval(async () => {
+    const save = setInterval(() => {
       const position = elapsedSecondsRef.current;
       if (position < 10) return;
-      updatePlaybackProgress(sessionToken, position, user.token).catch(() => {});
-      // Also persist to watch-history using the session's authoritative duration.
-      try {
-        const prog = await fetchPlaybackProgress(sessionToken, user.token);
-        if (prog.duration > 0) {
-          saveWatchProgressAction({ movieId, watchedSeconds: position, durationSeconds: prog.duration }).catch(() => {});
-        }
-      } catch {}
+      saveWatchProgressAction({ movieId, watchedSeconds: position, durationSeconds: 0 }).catch(() => {});
     }, 30_000);
 
     return () => {
       clearInterval(tick);
       clearInterval(save);
-      // Save on unmount (user navigates away)
       const position = elapsedSecondsRef.current;
       if (position >= 10) {
-        updatePlaybackProgress(sessionToken, position, user.token).catch(() => {});
+        saveWatchProgressAction({ movieId, watchedSeconds: position, durationSeconds: 0 }).catch(() => {});
       }
     };
   }, [sessionToken, user, movieId]);

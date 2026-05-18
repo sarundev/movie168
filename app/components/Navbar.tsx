@@ -1,18 +1,25 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
+import { fetchMovieFilters, type ApiGenre } from "../lib/api";
 
-const navItems = [
-  {
-    label: "កាលវិភាគ & អ្វៀបអស្ប្រ",
-    href: "/schedule",
-    dropdown: [
-      { label: "កាលវិភាគ", href: "/schedule" },
-      { label: "អ្វៀបអស្ប្រ", href: "/schedule/live" },
-    ],
-  },
+const COUNTRY_LABELS: Record<string, string> = {
+  US: "អាមេរិក",
+  KR: "កូរ៉េ",
+  CN: "ចិន",
+  TH: "ថៃ",
+  KH: "ខ្មែរ",
+  JP: "ជប៉ុន",
+  IN: "ឥណ្ឌា",
+  FR: "បារាំង",
+  GB: "អង់គ្លេស",
+  HK: "ហុងកុង",
+  TW: "តៃវ៉ាន់",
+};
+
+const staticNavItems = [
   {
     label: "រឿង ដុំ",
     href: "/movies",
@@ -33,40 +40,6 @@ const navItems = [
       { label: "បញ្ចប់ហើយ", href: "/series?status=completed" },
     ],
   },
-  {
-    label: "ប្រភេទរឿង",
-    href: "/genres",
-    dropdown: [
-      { label: "សកម្មភាព", href: "/movies?genre=action" },
-      { label: "គួរឲ្យសើច", href: "/movies?genre=comedy" },
-      { label: "រឿងស្នេហា", href: "/movies?genre=romance" },
-      { label: "រឿងបំភ័យ", href: "/movies?genre=horror" },
-      { label: "វិទ្យាសាស្ត្រ", href: "/movies?genre=sci-fi" },
-    ],
-  },
-  {
-    label: "ប្រទេស",
-    href: "/countries",
-    dropdown: [
-      { label: "អាមេរិក", href: "/movies?country=us" },
-      { label: "កូរ៉េ", href: "/movies?country=kr" },
-      { label: "ចិន", href: "/movies?country=cn" },
-      { label: "ថៃ", href: "/movies?country=th" },
-      { label: "ខ្មែរ", href: "/movies?country=kh" },
-    ],
-  },
-  {
-    label: "MARVEL UNIVERSE",
-    href: "/movies?genre=marvel",
-    isMarvel: true,
-    dropdown: [
-      { label: "Avengers", href: "/movies?franchise=avengers" },
-      { label: "Spider-Man", href: "/movies?franchise=spider-man" },
-      { label: "Thor", href: "/movies?franchise=thor" },
-      { label: "Iron Man", href: "/movies?franchise=iron-man" },
-      { label: "Captain America", href: "/movies?franchise=captain-america" },
-    ],
-  },
 ];
 
 
@@ -80,6 +53,45 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const dropdownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userMenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [genres, setGenres] = useState<ApiGenre[]>([]);
+  const [countries, setCountries] = useState<{ label: string; value: string }[]>([]);
+
+  useEffect(() => {
+    fetchMovieFilters()
+      .then((f) => {
+        setGenres(f.genres);
+        setCountries(f.countries);
+      })
+      .catch(() => {});
+  }, []);
+
+  const genreDropdown = genres.length > 0
+    ? genres.map((g) => ({ label: g.name, href: `/movies?genre=${g.slug}` }))
+    : [
+        { label: "សកម្មភាព", href: "/movies?genre=action" },
+        { label: "គួរឲ្យសើច", href: "/movies?genre=comedy" },
+        { label: "រឿងស្នេហា", href: "/movies?genre=romance" },
+        { label: "រឿងបំភ័យ", href: "/movies?genre=horror" },
+      ];
+
+  const countryDropdown = countries.length > 0
+    ? countries.map((c) => ({
+        label: COUNTRY_LABELS[c.value.toUpperCase()] ?? c.label,
+        href: `/movies?country=${c.value.toLowerCase()}`,
+      }))
+    : [
+        { label: "អាមេរិក", href: "/movies?country=us" },
+        { label: "កូរ៉េ", href: "/movies?country=kr" },
+        { label: "ចិន", href: "/movies?country=cn" },
+        { label: "ថៃ", href: "/movies?country=th" },
+        { label: "ខ្មែរ", href: "/movies?country=kh" },
+      ];
+
+  const navItems = [
+    ...staticNavItems,
+    { label: "ប្រភេទរឿង", href: "/movies", dropdown: genreDropdown },
+    { label: "ប្រទេស", href: "/movies", dropdown: countryDropdown },
+  ];
 
   const openUserMenu  = () => { if (userMenuTimer.current) clearTimeout(userMenuTimer.current); setUserMenuOpen(true); };
   const closeUserMenu = () => { userMenuTimer.current = setTimeout(() => setUserMenuOpen(false), 150); };
@@ -136,11 +148,7 @@ export default function Navbar() {
                     if (!active) e.currentTarget.style.color = "#d1d1d1";
                   }}
                 >
-                  {(item as { isMarvel?: boolean }).isMarvel ? (
-                    <span style={{ color: "#e8c84a", fontWeight: 800 }}>{item.label}</span>
-                  ) : (
-                    item.label
-                  )}
+                  {item.label}
                   {item.dropdown && (
                     <svg
                       width="10" height="10" viewBox="0 0 24 24" fill="none"

@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { fetchMovies, getMovieRating, type ApiMovie } from "../lib/api";
+import { fetchMovies, fetchMovieFilters, getMovieRating, type ApiMovie, type ApiGenre } from "../lib/api";
 
-const GENRES   = ["All","Action","Drama","Sci-Fi","Horror","Comedy","Romance","Thriller","Animation","Fantasy","Crime","History"];
-const QUALITIES: Array<"All"|"4K"|"FHD"|"HD"> = ["All","4K","FHD","HD"];
-const SORTS     = [
+const SORTS = [
   { label: "Newest First",  key: "newest"  },
   { label: "Highest Rated", key: "rating"  },
   { label: "Title A–Z",     key: "alpha"   },
@@ -40,7 +39,6 @@ interface DisplayMovie {
   year: number;
   releaseDate?: string;
   rating: number;
-  genres: string[];
   quality: string;
   badge?: string;
   gradient: string;
@@ -56,7 +54,6 @@ function toDisplay(m: ApiMovie): DisplayMovie {
     year:        m.release_year ?? (m.release_date ? new Date(m.release_date).getFullYear() : 0),
     releaseDate: m.release_date,
     rating:      average,
-    genres:      (m.genres ?? []).map(g => typeof g === "string" ? g : g.name),
     quality:     m.quality ?? "HD",
     badge:       m.badge,
     gradient:    m.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)",
@@ -77,20 +74,38 @@ function MovieCardSkeleton() {
 }
 
 export default function MoviesPage() {
+  const searchParams = useSearchParams();
+
+  // Filter state — initialised from URL params so navbar links work
+  const [genre,       setGenre]       = useState(searchParams.get("genre") ?? "");
+  const [quality,     setQuality]     = useState(searchParams.get("quality") ?? "");
+  const [sort,        setSort]        = useState(searchParams.get("sort") ?? "newest");
+  const [searchInput, setSearchInput] = useState(searchParams.get("q") ?? "");
+  const [search,      setSearch]      = useState(searchParams.get("q") ?? "");
+
+  // Movies state
   const [movies,      setMovies]      = useState<DisplayMovie[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [page,        setPage]        = useState(1);
   const [hasMore,     setHasMore]     = useState(true);
-  const [genre,       setGenre]       = useState("All");
-  const [quality,     setQuality]     = useState<"All"|"4K"|"FHD"|"HD">("All");
-  const [sort,        setSort]        = useState("newest");
-  const [searchInput, setSearchInput] = useState("");
-  const [search,      setSearch]      = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Filters from API
+  const [genreList,   setGenreList]   = useState<ApiGenre[]>([]);
+  const [qualityList, setQualityList] = useState<string[]>([]);
+
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  // Debounce search input by 400ms to avoid firing API on every keystroke
+  // Load filter options once on mount
+  useEffect(() => {
+    fetchMovieFilters().then((f) => {
+      setGenreList(f.genres);
+      setQualityList(f.qualities.map((q) => q.value));
+    }).catch(() => {});
+  }, []);
+
+  // Debounce search
   useEffect(() => {
     const id = setTimeout(() => setSearch(searchInput), 400);
     return () => clearTimeout(id);
@@ -99,9 +114,9 @@ export default function MoviesPage() {
   const buildParams = useCallback((pg: number) => {
     const p: Record<string, string> = { page: String(pg), per_page: "24" };
     if (sort !== "newest") p.sort = sort;
-    if (genre !== "All")   p.genre = genre.toLowerCase();
-    if (quality !== "All") p.quality = quality;
-    if (search.trim())     p.search = search.trim();
+    if (genre)   p.genre   = genre;
+    if (quality) p.quality = quality;
+    if (search.trim()) p.search = search.trim();
     return p;
   }, [sort, genre, quality, search]);
 
@@ -124,7 +139,7 @@ export default function MoviesPage() {
     return () => { cancelled = true; };
   }, [buildParams]);
 
-  // Infinite scroll — load next page
+  // Infinite scroll
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;
     const nextPage = page + 1;
@@ -148,13 +163,15 @@ export default function MoviesPage() {
     return () => observer.disconnect();
   }, [loadMore]);
 
-  // Client-side sort (supplements server sort for already-loaded data)
+  // Client-side sort supplement for already-loaded data
   const displayed = useMemo(() => {
     const list = [...movies];
     if (sort === "alpha")  list.sort((a, b) => a.title.localeCompare(b.title));
     else if (sort === "oldest") list.sort((a, b) => a.year - b.year);
     return list;
   }, [movies, sort]);
+
+  const selectedGenreName = genreList.find(g => g.slug === genre)?.name ?? genre;
 
   return (
     <div className="min-h-screen" style={{ background: "#0d0d12" }}>
@@ -175,23 +192,22 @@ export default function MoviesPage() {
             </p>
           </div>
 
-          {/* Search + sort */}
+          {/* Search + filter toggle */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-            <div className="relative flex just w-full sm:w-48">
-              <div className="relative">
-              <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input
-                type="text"
-                value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                placeholder="Search movies..."
-                className="pl-9 pr-4 py-2 rounded-lg text-sm text-white placeholder-zinc-600 outline-none w-full"
-                style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)" }}
-              />
+            <div className="relative flex w-full sm:w-48 gap-2">
+              <div className="relative flex-1">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input
+                  type="text"
+                  value={searchInput}
+                  onChange={e => setSearchInput(e.target.value)}
+                  placeholder="Search movies..."
+                  className="pl-9 pr-4 py-2 rounded-lg text-sm text-white placeholder-zinc-600 outline-none w-full"
+                  style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)" }}
+                />
               </div>
-<div className="relative">
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="lg:hidden shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium"
@@ -202,48 +218,36 @@ export default function MoviesPage() {
                 </svg>
                 Filter
               </button>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* <select
-                value={sort}
-                onChange={e => setSort(e.target.value)}
-                className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm outline-none"
-                style={{ background:"rgba(255,255,255,0.06)", border:"1px solid rgba(255,255,255,0.1)", color:"#aaa" }}
-              >
-                {SORTS.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
-              </select> */}
-              
             </div>
           </div>
         </div>
 
         {/* Active filters */}
-        {(genre !== "All" || quality !== "All" || search.trim()) && (
+        {(genre || quality || search.trim()) && (
           <div className="flex items-center gap-2 mt-3 flex-wrap">
             <span className="text-xs" style={{ color:"#666" }}>Active:</span>
-            {genre !== "All" && (
+            {genre && (
               <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
                 style={{ background:"rgba(201,168,53,0.12)", border:"1px solid rgba(201,168,53,0.3)", color:"#c9a835" }}>
-                {genre}
-                <button onClick={() => setGenre("All")} className="ml-1 hover:opacity-70">×</button>
+                {selectedGenreName}
+                <button onClick={() => setGenre("")} className="ml-1 hover:opacity-70">×</button>
               </span>
             )}
-            {quality !== "All" && (
+            {quality && (
               <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
                 style={{ background:"rgba(201,168,53,0.12)", border:"1px solid rgba(201,168,53,0.3)", color:"#c9a835" }}>
                 {quality}
-                <button onClick={() => setQuality("All")} className="ml-1 hover:opacity-70">×</button>
+                <button onClick={() => setQuality("")} className="ml-1 hover:opacity-70">×</button>
               </span>
             )}
             {search.trim() && (
               <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full"
                 style={{ background:"rgba(201,168,53,0.12)", border:"1px solid rgba(201,168,53,0.3)", color:"#c9a835" }}>
-                "{search}"
+                &quot;{search}&quot;
                 <button onClick={() => { setSearchInput(""); setSearch(""); }} className="ml-1 hover:opacity-70">×</button>
               </span>
             )}
-            <button onClick={() => { setGenre("All"); setQuality("All"); setSearchInput(""); setSearch(""); }}
+            <button onClick={() => { setGenre(""); setQuality(""); setSearchInput(""); setSearch(""); }}
               className="text-xs transition-colors" style={{ color:"#666" }}
               onMouseEnter={e => (e.currentTarget.style.color = "#e50914")}
               onMouseLeave={e => (e.currentTarget.style.color = "#666")}>
@@ -256,33 +260,56 @@ export default function MoviesPage() {
       <div className="flex flex-col lg:flex-row px-4 sm:px-6 lg:px-12 py-8 gap-6 lg:gap-8">
 
         {/* Sidebar */}
-        <aside className={`${sidebarOpen ? "block" : "hidden"} lg:block lg:shrink-0`}>
+        <aside className={`${sidebarOpen ? "block" : "hidden"} lg:block lg:shrink-0`} style={{ minWidth: "160px" }}>
+
           {/* Genre filter */}
           <div className="mb-4 lg:mb-6">
             <h3 className="text-xs font-bold uppercase tracking-widest mb-2 lg:mb-3" style={{ color:"#c9a835" }}>Genre</h3>
+
+            {/* Mobile: pill buttons */}
             <div className="flex flex-wrap gap-1.5 lg:hidden">
-              {GENRES.map(g => (
-                <button key={g} onClick={() => setGenre(g)}
+              <button onClick={() => setGenre("")}
+                className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  background: !genre ? "rgba(201,168,53,0.18)" : "rgba(255,255,255,0.06)",
+                  color: !genre ? "#c9a835" : "#888",
+                  border: !genre ? "1px solid rgba(201,168,53,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                }}>
+                All
+              </button>
+              {genreList.map(g => (
+                <button key={g.id} onClick={() => setGenre(g.slug)}
                   className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
                   style={{
-                    background: genre === g ? "rgba(201,168,53,0.18)" : "rgba(255,255,255,0.06)",
-                    color: genre === g ? "#c9a835" : "#888",
-                    border: genre === g ? "1px solid rgba(201,168,53,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                    background: genre === g.slug ? "rgba(201,168,53,0.18)" : "rgba(255,255,255,0.06)",
+                    color: genre === g.slug ? "#c9a835" : "#888",
+                    border: genre === g.slug ? "1px solid rgba(201,168,53,0.5)" : "1px solid rgba(255,255,255,0.1)",
                   }}>
-                  {g}
+                  {g.name}
                 </button>
               ))}
             </div>
+
+            {/* Desktop: list */}
             <div className="hidden lg:flex flex-col gap-1">
-              {GENRES.map(g => (
-                <button key={g} onClick={() => setGenre(g)}
+              <button onClick={() => setGenre("")}
+                className="text-left px-3 py-2 rounded-lg text-sm transition-all"
+                style={{
+                  background: !genre ? "rgba(201,168,53,0.12)" : "transparent",
+                  color: !genre ? "#c9a835" : "#888",
+                  borderLeft: !genre ? "2px solid #c9a835" : "2px solid transparent",
+                }}>
+                All Genres
+              </button>
+              {genreList.map(g => (
+                <button key={g.id} onClick={() => setGenre(g.slug)}
                   className="text-left px-3 py-2 rounded-lg text-sm transition-all"
                   style={{
-                    background: genre === g ? "rgba(201,168,53,0.12)" : "transparent",
-                    color: genre === g ? "#c9a835" : "#888",
-                    borderLeft: genre === g ? "2px solid #c9a835" : "2px solid transparent",
+                    background: genre === g.slug ? "rgba(201,168,53,0.12)" : "transparent",
+                    color: genre === g.slug ? "#c9a835" : "#888",
+                    borderLeft: genre === g.slug ? "2px solid #c9a835" : "2px solid transparent",
                   }}>
-                  {g}
+                  {g.name}
                 </button>
               ))}
             </div>
@@ -291,8 +318,18 @@ export default function MoviesPage() {
           {/* Quality filter */}
           <div className="mb-4 lg:mb-6">
             <h3 className="text-xs font-bold uppercase tracking-widest mb-2 lg:mb-3" style={{ color:"#c9a835" }}>Quality</h3>
+
             <div className="flex flex-wrap gap-1.5 lg:hidden">
-              {QUALITIES.map(q => (
+              <button onClick={() => setQuality("")}
+                className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
+                style={{
+                  background: !quality ? "rgba(201,168,53,0.18)" : "rgba(255,255,255,0.06)",
+                  color: !quality ? "#c9a835" : "#888",
+                  border: !quality ? "1px solid rgba(201,168,53,0.5)" : "1px solid rgba(255,255,255,0.1)",
+                }}>
+                All
+              </button>
+              {qualityList.map(q => (
                 <button key={q} onClick={() => setQuality(q)}
                   className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
                   style={{
@@ -304,8 +341,18 @@ export default function MoviesPage() {
                 </button>
               ))}
             </div>
+
             <div className="hidden lg:flex flex-col gap-1">
-              {QUALITIES.map(q => (
+              <button onClick={() => setQuality("")}
+                className="text-left px-3 py-2 rounded-lg text-sm transition-all"
+                style={{
+                  background: !quality ? "rgba(201,168,53,0.12)" : "transparent",
+                  color: !quality ? "#c9a835" : "#888",
+                  borderLeft: !quality ? "2px solid #c9a835" : "2px solid transparent",
+                }}>
+                All Quality
+              </button>
+              {qualityList.map(q => (
                 <button key={q} onClick={() => setQuality(q)}
                   className="text-left px-3 py-2 rounded-lg text-sm transition-all"
                   style={{
@@ -313,7 +360,7 @@ export default function MoviesPage() {
                     color: quality === q ? "#c9a835" : "#888",
                     borderLeft: quality === q ? "2px solid #c9a835" : "2px solid transparent",
                   }}>
-                  {q === "All" ? "All Quality" : q}
+                  {q}
                 </button>
               ))}
             </div>
@@ -330,7 +377,7 @@ export default function MoviesPage() {
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <div className="text-5xl">🎬</div>
               <p className="text-lg font-semibold" style={{ color:"#555" }}>No movies found</p>
-              <button onClick={() => { setGenre("All"); setQuality("All"); setSearchInput(""); setSearch(""); }}
+              <button onClick={() => { setGenre(""); setQuality(""); setSearchInput(""); setSearch(""); }}
                 className="px-6 py-2 rounded-lg text-sm font-semibold"
                 style={{ background:"linear-gradient(135deg,#c9a835,#8a6e1a)", color:"#0d0d12" }}>
                 Clear Filters
@@ -363,21 +410,17 @@ export default function MoviesPage() {
                             onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                           />
                         )}
-
                         <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 45%)" }} />
-
                         <div className="absolute top-1.5 left-1.5 font-black rounded leading-none"
                           style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background:"rgba(0,0,0,0.55)", color:"#c9a835" }}>
                           168
                         </div>
-
                         {movie.badge && (
                           <span className="absolute top-1.5 right-1.5 font-black rounded tracking-widest"
                             style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background: badgeBg[movie.badge] ?? "#c9a835", color:"white" }}>
                             {movie.badge}
                           </span>
                         )}
-
                         <div className="absolute bottom-1.5 left-1.5 flex items-center rounded overflow-hidden">
                           <span className="font-black" style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background: qColor, color:"white" }}>
                             {qLabel}
@@ -388,7 +431,6 @@ export default function MoviesPage() {
                             </span>
                           )}
                         </div>
-
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                           style={{ background:"rgba(0,0,0,0.5)" }}>
                           <div className="w-11 h-11 rounded-full flex items-center justify-center"
@@ -399,7 +441,6 @@ export default function MoviesPage() {
                           </div>
                         </div>
                       </div>
-
                       <div className="mt-1.5 px-0.5">
                         <p className="font-semibold line-clamp-2 leading-tight transition-colors group-hover:text-amber-400"
                           style={{ color:"#e5e5e5", fontSize:"clamp(10px,2.8vw,13px)" }}>
@@ -414,7 +455,6 @@ export default function MoviesPage() {
                 })}
               </div>
 
-              {/* Infinite scroll sentinel */}
               <div ref={loaderRef} className="h-16 flex items-center justify-center mt-4">
                 {loadingMore && (
                   <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5">

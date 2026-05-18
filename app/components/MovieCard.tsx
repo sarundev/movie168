@@ -1,6 +1,6 @@
 "use client";
 
-import type { Movie } from "../data/movies";
+import { getMovieRating, type ApiMovie } from "../lib/api";
 
 const qualityColors: Record<string, string> = {
   "4K": "#1d4ed8",
@@ -15,8 +15,17 @@ const badgeColors: Record<string, string> = {
   TOP: "#7c3aed",
 };
 
-export default function MovieCard({ movie }: { movie: Movie }) {
-  const qColor = qualityColors[movie.quality] ?? qualityColors["HD"];
+export default function MovieCard({ movie }: { movie: ApiMovie }) {
+  const quality  = movie.quality ?? "HD";
+  const qColor   = qualityColors[quality] ?? qualityColors["HD"];
+  const duration = movie.runtime_minutes
+    ? `${Math.floor(movie.runtime_minutes / 60)}h ${movie.runtime_minutes % 60}m`
+    : "";
+  const year     = movie.release_year ?? (movie.release_date ? new Date(movie.release_date).getFullYear() : 0);
+  const image    = movie.poster_url ?? movie.thumbnail_url ?? movie.backdrop_url;
+  const genres   = (movie.genres ?? []).map(g => typeof g === "string" ? g : g.name);
+  const { average: rating } = getMovieRating(movie);
+  const gradient = movie.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)";
 
   return (
     <div className="group shrink-0 cursor-pointer" style={{ width: "230px" }}>
@@ -26,7 +35,7 @@ export default function MovieCard({ movie }: { movie: Movie }) {
         style={{
           width: "230px",
           height: "330px",
-          background: movie.gradient,
+          background: gradient,
           border: "1px solid rgba(255,255,255,0.06)",
           boxShadow: "0 4px 16px rgba(0,0,0,0.55)",
         }}
@@ -39,10 +48,9 @@ export default function MovieCard({ movie }: { movie: Movie }) {
             "0 4px 16px rgba(0,0,0,0.55)";
         }}
       >
-        {/* Poster image */}
-        {movie.image && (
+        {image && (
           <img
-            src={movie.image}
+            src={image}
             alt={movie.title}
             className="absolute inset-0 w-full h-full object-cover"
             loading="lazy"
@@ -50,7 +58,6 @@ export default function MovieCard({ movie }: { movie: Movie }) {
           />
         )}
 
-        {/* Vignette */}
         <div
           className="absolute inset-0"
           style={{
@@ -59,7 +66,6 @@ export default function MovieCard({ movie }: { movie: Movie }) {
           }}
         />
 
-        {/* Badge top-right */}
         {movie.badge && (
           <span
             className="absolute top-2 right-2 text-[10px] font-black px-2 py-0.5 rounded tracking-widest"
@@ -69,28 +75,22 @@ export default function MovieCard({ movie }: { movie: Movie }) {
           </span>
         )}
 
-        {/* Quality badge bottom-left */}
         <div className="absolute bottom-2 left-2 flex items-center gap-1">
           <span
             className="text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider"
             style={{ background: qColor, color: "white" }}
           >
-            {movie.quality === "4K" ? "4K ULTRA HD" : movie.quality === "FHD" ? "FHD 1080P" : movie.quality === "HD" ? "HD 720P" : movie.quality}
+            {quality === "4K" ? "4K ULTRA HD" : quality === "FHD" ? "FHD 1080P" : quality === "HD" ? "HD 720P" : quality}
           </span>
         </div>
 
-        {/* Hover overlay */}
         <div
           className="absolute inset-0 flex flex-col items-center justify-center gap-3.5 opacity-0 group-hover:opacity-100 transition-all duration-250"
           style={{ background: "rgba(0,0,0,0.58)" }}
         >
-          {/* Play button */}
           <button
             className="w-14 h-14 rounded-full flex items-center justify-center transition-transform hover:scale-110"
-            style={{
-              background: "rgba(201,168,53,0.94)",
-              boxShadow: "0 0 28px rgba(201,168,53,0.5)",
-            }}
+            style={{ background: "rgba(201,168,53,0.94)", boxShadow: "0 0 28px rgba(201,168,53,0.5)" }}
             aria-label={`Play ${movie.title}`}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#0d0d12">
@@ -98,50 +98,28 @@ export default function MovieCard({ movie }: { movie: Movie }) {
             </svg>
           </button>
 
-          {/* Rating */}
           <div className="flex items-center gap-1.5">
             <svg width="13" height="13" fill="#c9a835" viewBox="0 0 20 20">
               <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
             </svg>
-            <span className="text-white text-sm font-bold">{movie.rating}</span>
-            <span className="text-zinc-400 text-xs">{movie.duration}</span>
+            <span className="text-white text-sm font-bold">{(rating ?? 0).toFixed(1)}</span>
+            {duration && <span className="text-zinc-400 text-xs">{duration}</span>}
           </div>
 
-          {/* Genre chips */}
           <div className="flex flex-wrap gap-1.5 justify-center px-3">
-            {movie.genres.slice(0, 2).map((g) => (
+            {genres.slice(0, 2).map((g) => (
               <span
                 key={g}
                 className="text-[10px] px-2 py-0.5 rounded-full"
-                style={{
-                  background: "rgba(255,255,255,0.12)",
-                  border: "1px solid rgba(255,255,255,0.15)",
-                  color: "#ddd",
-                }}
+                style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)", color: "#ddd" }}
               >
                 {g}
               </span>
             ))}
           </div>
-
-          {/* Add to list */}
-          <button
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
-            style={{
-              color: "#c9a835",
-              border: "1px solid rgba(201,168,53,0.45)",
-              background: "rgba(201,168,53,0.1)",
-            }}
-          >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            My List
-          </button>
         </div>
       </div>
 
-      {/* Title & year below poster */}
       <div className="mt-2.5 px-0.5">
         <p
           className="text-md font-semibold leading-snug line-clamp-1 transition-colors group-hover:text-amber-400"
@@ -150,19 +128,22 @@ export default function MovieCard({ movie }: { movie: Movie }) {
           {movie.title}
         </p>
         <div className="relative flex gap-2 pt-2">
-
-      
-        <p className="text-white text-xs bg-gray-800 px-2 py-0.5 rounded-sm flex items-center gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          {movie.year}
-        </p>
-        <p className="text-white text-xs bg-gray-800 px-2 py-0.5 rounded-sm flex items-center gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          {movie.duration}
-        </p>
-           </div>
+          <p className="text-white text-xs bg-gray-800 px-2 py-0.5 rounded-sm flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            {year || "—"}
+          </p>
+          {duration && (
+            <p className="text-white text-xs bg-gray-800 px-2 py-0.5 rounded-sm flex items-center gap-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+              {duration}
+            </p>
+          )}
+        </div>
       </div>
-
     </div>
   );
 }

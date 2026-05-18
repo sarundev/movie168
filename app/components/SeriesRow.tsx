@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import type { Series } from "../data/movies";
+import { getMovieRating, type ApiMovie } from "../lib/api";
 
 interface SeriesRowProps {
   title: string;
-  series: Series[];
+  series: ApiMovie[];
   viewAllHref?: string;
 }
 
@@ -58,11 +58,14 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
         className="sm:hidden flex gap-3 overflow-x-auto hide-scrollbar pb-3"
       >
         {series.map(s => {
-          const qColor = qualityBg[s.quality] ?? "#15803d";
+          const quality = s.quality ?? "HD";
+          const qColor = qualityBg[quality] ?? "#15803d";
+          const image = s.poster_url ?? s.thumbnail_url ?? s.backdrop_url;
+          const gradient = s.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)";
           return (
             <a
               key={s.id}
-              href={`/series/${s.id}`}
+              href={`/tv-shows/${s.slug}`}
               className="group shrink-0 cursor-pointer"
               style={{ width: "120px" }}
             >
@@ -72,14 +75,14 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 style={{
                   width: "120px",
                   height: "172px",
-                  background: s.gradient,
+                  background: gradient,
                   border: "1px solid rgba(255,255,255,0.07)",
                   boxShadow: "0 2px 10px rgba(0,0,0,0.6)",
                 }}
               >
-                {s.image && (
+                {image && (
                   <img
-                    src={s.image}
+                    src={image}
                     alt={s.title}
                     className="absolute inset-0 w-full h-full object-cover object-top"
                     loading="lazy"
@@ -91,18 +94,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   className="absolute inset-0"
                   style={{ background: "linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 50%)" }}
                 />
-
-                {/* Status chip — top left */}
-                <span
-                  className="absolute top-1.5 left-1.5 text-[8px] font-bold px-1.5 py-0.5 rounded-full leading-tight"
-                  style={{
-                    background: s.status === "Ongoing" ? "rgba(34,197,94,0.22)" : "rgba(99,102,241,0.22)",
-                    color: s.status === "Ongoing" ? "#4ade80" : "#a5b4fc",
-                    border: `1px solid ${s.status === "Ongoing" ? "rgba(74,222,128,0.35)" : "rgba(165,180,252,0.35)"}`,
-                  }}
-                >
-                  {s.status === "Ongoing" ? "ON AIR" : "DONE"}
-                </span>
 
                 {/* Badge — top right */}
                 {s.badge && (
@@ -119,17 +110,7 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   className="absolute bottom-1.5 left-1.5 text-[8px] font-black px-1.5 py-0.5 rounded tracking-wide"
                   style={{ background: qColor, color: "white" }}
                 >
-                  {s.quality}
-                </span>
-
-                {/* Rating — bottom right */}
-                <span
-                  className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5"
-                >
-                  <svg width="8" height="8" fill="#c9a835" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                  <span className="text-[9px] font-bold" style={{ color: "#c9a835" }}>{s.rating}</span>
+                  {quality}
                 </span>
 
                 {/* Tap overlay */}
@@ -156,9 +137,11 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 >
                   {s.title}
                 </p>
-                <p className="text-[10px] mt-0.5" style={{ color: "#666" }}>
-                  S{s.seasons} · {s.episodes} eps
-                </p>
+                {s.release_year && (
+                  <p className="text-[10px] mt-0.5" style={{ color: "#666" }}>
+                    {s.release_year}
+                  </p>
+                )}
               </div>
             </a>
           );
@@ -197,11 +180,17 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
         onMouseLeave={() => { paused.current = false; }}
       >
         {series.map(s => {
-          const qColor = qualityBg[s.quality] ?? "#15803d";
+          const quality = s.quality ?? "HD";
+          const qColor = qualityBg[quality] ?? "#15803d";
+          const image = s.poster_url ?? s.thumbnail_url ?? s.backdrop_url;
+          const gradient = s.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)";
+          const { average: rating } = getMovieRating(s);
+          const genres = (s.genres ?? []).map(g => typeof g === "string" ? g : g.name);
+          const year = s.release_year ?? (s.release_date ? new Date(s.release_date).getFullYear() : null);
           return (
             <a
               key={s.id}
-              href={`/series/${s.id}`}
+              href={`/tv-shows/${s.slug}`}
               className="group shrink-0 cursor-pointer"
               style={{ width: "230px" }}
             >
@@ -211,7 +200,7 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 style={{
                   width: "230px",
                   height: "330px",
-                  background: s.gradient,
+                  background: gradient,
                   border: "1px solid rgba(255,255,255,0.06)",
                   boxShadow: "0 4px 16px rgba(0,0,0,0.55)",
                 }}
@@ -223,9 +212,9 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.55)";
                 }}
               >
-                {s.image && (
+                {image && (
                   <img
-                    src={s.image}
+                    src={image}
                     alt={s.title}
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
@@ -236,18 +225,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   className="absolute inset-0"
                   style={{ background: "linear-gradient(to top,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.2) 45%,transparent 100%)" }}
                 />
-
-                {/* Status chip */}
-                <span
-                  className="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                  style={{
-                    background: s.status === "Ongoing" ? "rgba(34,197,94,0.2)" : "rgba(99,102,241,0.2)",
-                    color: s.status === "Ongoing" ? "#4ade80" : "#a5b4fc",
-                    border: `1px solid ${s.status === "Ongoing" ? "rgba(74,222,128,0.3)" : "rgba(165,180,252,0.3)"}`,
-                  }}
-                >
-                  {s.status}
-                </span>
 
                 {s.badge && (
                   <span
@@ -262,7 +239,7 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   className="absolute bottom-2 left-2 text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider"
                   style={{ background: qColor, color: "white" }}
                 >
-                  {s.quality === "4K" ? "4K ULTRA HD" : s.quality === "FHD" ? "FHD 1080P" : "HD 720P"}
+                  {quality === "4K" ? "4K ULTRA HD" : quality === "FHD" ? "FHD 1080P" : "HD 720P"}
                 </span>
 
                 {/* Hover overlay */}
@@ -280,35 +257,28 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                     </svg>
                   </button>
 
-                  <div className="flex items-center gap-1.5">
-                    <svg width="13" height="13" fill="#c9a835" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                    <span className="text-white text-sm font-bold">{s.rating}</span>
-                    <span className="text-zinc-400 text-xs">S{s.seasons} · {s.episodes} eps</span>
-                  </div>
+                  {rating > 0 && (
+                    <div className="flex items-center gap-1.5">
+                      <svg width="13" height="13" fill="#c9a835" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                      </svg>
+                      <span className="text-white text-sm font-bold">{rating.toFixed(1)}</span>
+                    </div>
+                  )}
 
-                  <div className="flex flex-wrap gap-1.5 justify-center px-3">
-                    {s.genres.slice(0, 2).map(g => (
-                      <span
-                        key={g}
-                        className="text-[10px] px-2 py-0.5 rounded-full"
-                        style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)", color: "#ddd" }}
-                      >
-                        {g}
-                      </span>
-                    ))}
-                  </div>
-
-                  <button
-                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
-                    style={{ color: "#c9a835", border: "1px solid rgba(201,168,53,0.45)", background: "rgba(201,168,53,0.1)" }}
-                  >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 5v14M5 12h14" />
-                    </svg>
-                    My List
-                  </button>
+                  {genres.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 justify-center px-3">
+                      {genres.slice(0, 2).map(g => (
+                        <span
+                          key={g}
+                          className="text-[10px] px-2 py-0.5 rounded-full"
+                          style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.15)", color: "#ddd" }}
+                        >
+                          {g}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -320,9 +290,11 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 >
                   {s.title}
                 </p>
-                <p className="text-xs mt-0.5" style={{ color: "#777" }}>
-                  {s.year} · S{s.seasons} · {s.episodes} eps
-                </p>
+                {year && (
+                  <p className="text-xs mt-0.5" style={{ color: "#777" }}>
+                    {year}
+                  </p>
+                )}
               </div>
             </a>
           );

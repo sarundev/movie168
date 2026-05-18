@@ -54,6 +54,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => Promise<void>;
+  syncFromCookie: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -63,6 +64,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
 
+  /* Sync client state from the non-httpOnly auth_user cookie (set by server actions). */
+  const syncFromCookie = useCallback(() => {
+    try {
+      const match = document.cookie.split(";").find(c => c.trim().startsWith("auth_user="));
+      if (!match) return;
+      const raw = decodeURIComponent(match.split("=").slice(1).join("="));
+      const parsed = JSON.parse(raw) as Omit<AuthUser, "token">;
+      // Token is httpOnly — store a sentinel so we know the user is logged in
+      const authUser: AuthUser = { ...parsed, token: "__server__" };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
+      setUser(authUser);
+    } catch {}
+  }, []);
+
   /* restore session on mount */
   useEffect(() => {
     try {
@@ -70,16 +85,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (raw) {
         const authUser = JSON.parse(raw) as AuthUser;
         setUser(authUser);
-        // Re-establish the httpOnly cookie so server actions can authenticate.
-        // The cookie may be missing (expired or cleared) even when localStorage still holds the token.
-        fetch("/api/auth/session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: authUser.token, user: authUser }),
-        }).catch(() => {});
+        if (authUser.token && authUser.token !== "__server__") {
+          // Re-establish httpOnly cookie if it was cleared
+          fetch("/api/auth/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ token: authUser.token, user: authUser }),
+          }).catch(() => {});
+        }
+      } else {
+        // No localStorage — check if server-action cookie exists
+        syncFromCookie();
       }
     } catch {}
-  }, []);
+  }, [syncFromCookie]);
 
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
@@ -177,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, logout, syncFromCookie }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import type { Movie } from "../data/movies";
+import type { ApiMovie } from "../lib/api";
 
 const qualityColors: Record<string, string> = {
   "4K": "#1d4ed8",
@@ -11,7 +11,7 @@ const qualityColors: Record<string, string> = {
 
 interface TopTenRowProps {
   title?: string;
-  movies: Movie[];
+  movies: ApiMovie[];
 }
 
 export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTenRowProps) {
@@ -62,12 +62,15 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
         className="flex gap-2 overflow-x-auto hide-scrollbar scroll-smooth pb-4"
       >
         {movies.slice(0, 10).map((movie, idx) => {
-          const qColor = qualityColors[movie.quality] ?? qualityColors["HD"];
+          const quality = movie.quality ?? "HD";
+          const qColor = qualityColors[quality] ?? qualityColors["HD"];
           const rank = idx + 1;
+          const image = movie.poster_url ?? movie.thumbnail_url ?? movie.backdrop_url;
+          const gradient = movie.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)";
           return (
             <a
               key={movie.id}
-              href={`/movie/${movie.slug ?? movie.id}`}
+              href={`/movie/${movie.slug}`}
               className="group shrink-0 relative cursor-pointer"
               style={{ width: "220px", height: "300px" }}
             >
@@ -94,7 +97,7 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
                 style={{
                   width: "155px",
                   height: "300px",
-                  background: movie.gradient,
+                  background: gradient,
                   border: "1px solid rgba(255,255,255,0.06)",
                   boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
                   zIndex: 2,
@@ -109,9 +112,9 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
                 }}
               >
                 {/* Poster image */}
-                {movie.image && (
+                {image && (
                   <img
-                    src={movie.image}
+                    src={image}
                     alt={movie.title}
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
@@ -133,7 +136,7 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
                   className="absolute bottom-2 left-2 text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider"
                   style={{ background: qColor, color: "white", zIndex: 3 }}
                 >
-                  {movie.quality === "4K" ? "4K" : movie.quality}
+                  {quality}
                 </span>
 
                 {/* Hover play */}

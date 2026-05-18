@@ -1,26 +1,7 @@
-import { fetchMovieDetail, canWatchMovie, type ApiMovie } from "../../../lib/api";
+import { fetchMovieDetail, canWatchMovie } from "../../../lib/api";
 import { getServerUser } from "../../../lib/server-auth";
 import { serverApi } from "../../../lib/server-api";
-import { allMovies } from "../../../data/movies";
 import PlayerClient from "./PlayerClient";
-
-function staticFallback(slug: string): ApiMovie | null {
-  const numericId = parseInt(slug, 10);
-  const found = allMovies.find(
-    mv => mv.slug === slug || (!isNaN(numericId) && mv.id === numericId)
-  );
-  if (!found) return null;
-  return {
-    id: found.id,
-    slug: found.slug ?? String(found.id),
-    title: found.title,
-    overview: found.description ?? "",
-    quality: (found.quality === "CAM" ? "HD" : found.quality) as ApiMovie["quality"],
-    release_year: found.year,
-    sources: [],
-    comments_count: 0,
-  } as ApiMovie;
-}
 
 export default async function PlayerPage({
   params,
@@ -34,11 +15,17 @@ export default async function PlayerPage({
 
   const user = await getServerUser();
 
-  let movie: ApiMovie | null = null;
+  let movie;
   try {
     movie = await fetchMovieDetail(slug, user?.token);
   } catch {
-    movie = staticFallback(slug);
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#000" }}>
+        <p className="text-sm" style={{ color: "#ef4444" }}>រឿងមិនត្រូវបានរកឃើញ</p>
+        <a href="/" className="px-6 py-2.5 rounded-xl text-sm font-semibold"
+          style={{ background: "rgba(255,255,255,0.08)", color: "#888" }}>← ទំព័រដើម</a>
+      </div>
+    );
   }
 
   if (!movie) {
@@ -89,7 +76,7 @@ export default async function PlayerPage({
                 : "អ្នកមិនទាន់មានសិទ្ធិមើលរឿងនេះ"}
           </p>
           {!user ? (
-            <a href={`/login?next=/movie/${slug}/player`}
+            <a href={`/login?redirect=/movie/${slug}/player`}
               className="px-6 py-2.5 rounded-xl text-sm font-bold"
               style={{ background: "rgba(201,168,53,0.12)", border: "1px solid rgba(201,168,53,0.35)", color: "#c9a835" }}>
               ចូលគណនី

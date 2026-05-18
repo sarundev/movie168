@@ -2,11 +2,11 @@
 
 import { useRef, useEffect } from "react";
 import MovieCard from "./MovieCard";
-import type { Movie } from "../data/movies";
+import { getMovieRating, type ApiMovie } from "../lib/api";
 
 interface MovieRowProps {
   title: string;
-  movies: Movie[];
+  movies: ApiMovie[];
   viewAllHref?: string;
 }
 
@@ -32,11 +32,12 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
     return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
+  if (movies.length === 0) return null;
+
   const mobileMovies = movies.slice(0, MOBILE_LIMIT);
 
   return (
     <div>
-      {/* Section header */}
       <div className="flex items-center justify-between mb-3 sm:mb-5">
         <div className="flex items-center gap-3">
           <div
@@ -47,7 +48,6 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
             {title}
           </h2>
         </div>
-        {/* View all — mobile only */}
         <a
           href={viewAllHref}
           className="sm:hidden text-xs font-semibold transition-colors"
@@ -57,43 +57,43 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
         </a>
       </div>
 
-      {/* ── Mobile: 3-column grid ── */}
+      {/* Mobile: 3-column grid */}
       <div className="sm:hidden grid grid-cols-3 gap-2">
         {mobileMovies.map(movie => {
-          const qColor = qualityBg[movie.quality] ?? "#15803d";
-          const qualityLabel =
-            movie.quality === "4K" ? "4K ULTRA HD" :
-              movie.quality === "FHD" ? "FHD 1080P" :
-                movie.quality === "HD" ? "HD 720P" : movie.quality;
+          const quality  = movie.quality ?? "HD";
+          const qColor   = qualityBg[quality] ?? "#15803d";
+          const duration = movie.runtime_minutes
+            ? `${Math.floor(movie.runtime_minutes / 60)}h ${movie.runtime_minutes % 60}m`
+            : "";
+          const year     = movie.release_year ?? (movie.release_date ? new Date(movie.release_date).getFullYear() : 0);
+          const image    = movie.poster_url ?? movie.thumbnail_url ?? movie.backdrop_url;
+          const gradient = movie.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)";
 
           return (
-            <a key={movie.id} href={`/movie/${movie.slug ?? movie.id}`} className="group cursor-pointer">
-              {/* Poster */}
+            <a key={movie.id} href={`/movie/${movie.slug}`} className="group cursor-pointer">
               <div
                 className="relative rounded-lg overflow-hidden"
                 style={{
                   width: "100%",
                   aspectRatio: "2/3",
-                  background: movie.gradient,
+                  background: gradient,
                   border: "1px solid rgba(255,255,255,0.06)",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.6)",
                 }}
               >
-                {movie.image && (
+                {image && (
                   <img
-                    src={movie.image}
+                    src={image}
                     alt={movie.title}
                     className="absolute inset-0 w-full h-full object-cover object-top"
                     loading="lazy"
                     onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
-                {/* Bottom vignette */}
                 <div
                   className="absolute inset-0"
                   style={{ background: "linear-gradient(to top,rgba(0,0,0,0.7) 0%,transparent 45%)" }}
                 />
-                {/* Badge top-right */}
                 {movie.badge && (
                   <span
                     className="absolute top-1.5 right-1.5 text-[8px] font-black px-1.5 py-0.5 rounded tracking-widest"
@@ -102,21 +102,17 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
                     {movie.badge}
                   </span>
                 )}
-                {/* Quality bottom-left */}
                 <span
                   className="absolute bottom-1.5 left-1.5 font-black rounded tracking-wide"
                   style={{
-                    background: qColor,
-                    color: "white",
-                    fontSize: "clamp(7px, 1.8vw, 10px)",
-                    padding: "2px 5px",
+                    background: qColor, color: "white",
+                    fontSize: "clamp(7px, 1.8vw, 10px)", padding: "2px 5px",
                   }}
                 >
-                  {qualityLabel}
+                  {quality === "4K" ? "4K" : quality === "FHD" ? "FHD" : quality}
                 </span>
               </div>
 
-              {/* Info */}
               <div className="mt-1.5 px-0.5">
                 <p
                   className="font-semibold line-clamp-2 leading-tight transition-colors group-hover:text-amber-400"
@@ -125,16 +121,20 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
                   {movie.title}
                 </p>
                 <div className="relative flex gap-2 pt-2">
-
-
                   <p className="text-white text-xs bg-gray-800 px-1 py-0.5 rounded-sm flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
-                    {movie.year}
+                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    {year || "—"}
                   </p>
-                  <p className="text-white text-xs bg-gray-800 px-1 py-0.5 rounded-sm flex items-center gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                    {movie.duration}
-                  </p>
+                  {duration && (
+                    <p className="text-white text-xs bg-gray-800 px-1 py-0.5 rounded-sm flex items-center gap-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                      </svg>
+                      {duration}
+                    </p>
+                  )}
                 </div>
               </div>
             </a>
@@ -142,7 +142,7 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
         })}
       </div>
 
-      {/* ── Desktop: horizontal scroll ── */}
+      {/* Desktop: horizontal scroll */}
       <div
         ref={rowRef}
         className="hidden sm:flex gap-4 overflow-x-auto hide-scrollbar scroll-smooth pb-4"
@@ -150,7 +150,7 @@ export default function MovieRow({ title, movies, viewAllHref = "/movies" }: Mov
         onMouseLeave={() => { paused.current = false; }}
       >
         {movies.map(movie => (
-          <a key={movie.id} href={`/movie/${movie.slug ?? movie.id}`} className="shrink-0">
+          <a key={movie.id} href={`/movie/${movie.slug}`} className="shrink-0">
             <MovieCard movie={movie} />
           </a>
         ))}

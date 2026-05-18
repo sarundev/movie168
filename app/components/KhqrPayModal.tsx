@@ -55,7 +55,8 @@ export default function KhqrPayModal({ paymentUrl, transactionId, amount, label,
   useEffect(() => {
     pollRef.current = setInterval(async () => {
       const res = await checkPaymentStatusAction(transactionId);
-      const s = (res.data as { status?: string })?.status;
+      const raw = res.data as { data?: { status?: string }; status?: string } | undefined;
+      const s = raw?.data?.status ?? raw?.status;
       if (s === "success") {
         clearInterval(pollRef.current!);
         clearInterval(timerRef.current!);

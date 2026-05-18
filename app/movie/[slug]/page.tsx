@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { fetchMovieDetail, fetchComments, type ApiMovie } from "../../lib/api";
+import { fetchMovieDetail, fetchComments, fetchMe, canWatchMovie } from "../../lib/api";
 import { getServerUser } from "../../lib/server-auth";
-import { allMovies } from "../../data/movies";
 import MovieDetailClient from "./MovieDetailClient";
 
 export const dynamic = "force-dynamic";
@@ -31,32 +30,6 @@ export async function generateMetadata({
   }
 }
 
-function staticFallback(slug: string): ApiMovie | null {
-  const numericId = parseInt(slug, 10);
-  const found = allMovies.find(
-    mv => mv.slug === slug || (!isNaN(numericId) && mv.id === numericId)
-  );
-  if (!found) return null;
-  return {
-    id: found.id,
-    slug: found.slug ?? String(found.id),
-    title: found.title,
-    overview: found.description ?? "",
-    quality: found.quality === "CAM" ? "HD" : found.quality,
-    badge: found.badge,
-    release_year: found.year,
-    release_date: found.releaseDate ?? `${found.year}-01-01`,
-    runtime_minutes: null,
-    rating: found.rating,
-    genres: found.genres.map((name, i) => ({ id: i + 1, name, slug: name.toLowerCase() })),
-    casts: (found.cast ?? []).map((name, i) => ({ id: i + 1, name })),
-    poster_url: found.image ?? undefined,
-    backdrop_url: undefined,
-    sources: [],
-    comments_count: 0,
-  } as ApiMovie;
-}
-
 export default async function MovieDetailPage({
   params,
 }: {
@@ -65,16 +38,27 @@ export default async function MovieDetailPage({
   const { slug } = await params;
   const user = await getServerUser();
 
-  let movie: ApiMovie | null = null;
+  let movie;
   try {
     movie = await fetchMovieDetail(slug, user?.token);
   } catch {
-    movie = staticFallback(slug);
+    notFound();
   }
 
   if (!movie) notFound();
 
-  const initialComments = await fetchComments(movie.id).catch(() => []);
+  const requiresPurchase = !canWatchMovie(movie) &&
+    (movie.purchase?.requires_purchase ?? movie.requires_purchase ?? false);
+
+  const [initialComments, sessionToken, userCreditBalance] = await Promise.all([
+    fetchComments(movie.id).catch(() => []),
+    Promise.resolve(
+      canWatchMovie(movie) ? (movie.playback_session_token ?? null) : null
+    ),
+    requiresPurchase && user?.token
+      ? fetchMe(user.token).then(u => u.credit_balance ?? u.balance ?? 0).catch(() => 0)
+      : Promise.resolve(0),
+  ]);
 
   return (
     <MovieDetailClient
@@ -82,7 +66,8 @@ export default async function MovieDetailPage({
       slug={slug}
       user={user}
       initialComments={initialComments}
-      sessionToken={movie.playback_session_token ?? null}
+      sessionToken={sessionToken}
+      userCreditBalance={userCreditBalance}
     />
   );
 }

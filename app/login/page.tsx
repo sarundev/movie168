@@ -2,24 +2,97 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { loginAction, verifyLoginCodeAction } from "../actions/auth-actions";
+
+function getDeviceName(): string {
+  if (typeof navigator === "undefined") return "Unknown Device";
+  const ua = navigator.userAgent;
+  const browser =
+    /Chrome/.test(ua) && !/Edg/.test(ua) ? "Chrome"
+    : /Firefox/.test(ua) ? "Firefox"
+    : /Safari/.test(ua) && !/Chrome/.test(ua) ? "Safari"
+    : /Edg/.test(ua) ? "Edge"
+    : "Browser";
+  const os =
+    /iPhone|iPad/.test(ua) ? "iOS"
+    : /Android/.test(ua) ? "Android"
+    : /Mac/.test(ua) ? "MacBook"
+    : /Win/.test(ua) ? "Windows"
+    : /Linux/.test(ua) ? "Linux"
+    : "Device";
+  return `${browser} on ${os}`;
+}
+
+function getDeviceFingerprint(): string {
+  if (typeof navigator === "undefined") return "unknown-device";
+  const raw = [navigator.userAgent, navigator.language, screen.width, screen.height, new Date().getTimezoneOffset()].join("|");
+  let h = 5381;
+  for (let i = 0; i < raw.length; i++) h = (h * 33) ^ raw.charCodeAt(i);
+  return (h >>> 0).toString(16).padStart(8, "0") + "-device-fingerprint";
+}
 
 export default function LoginPage() {
-  const { login, user, loading, error } = useAuth();
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [showPw,   setShowPw]   = useState(false);
+  const { syncFromCookie } = useAuth();
+  const [email,       setEmail]       = useState("");
+  const [password,    setPassword]    = useState("");
+  const [otp,            setOtp]            = useState("");
+  const [showPw,         setShowPw]         = useState(false);
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState<string | null>(null);
+  const [requiresOtp,    setRequiresOtp]    = useState(false);
+  const [challengeToken, setChallengeToken] = useState<string | null>(null);
 
-  /* redirect if already logged in — honour ?redirect= param */
   useEffect(() => {
-    if (!user) return;
-    const params = new URLSearchParams(window.location.search);
-    const redirect = params.get("redirect");
-    window.location.href = redirect ?? "/";
-  }, [user]);
+    const store = document.cookie.split(";").find(c => c.trim().startsWith("auth_user="));
+    if (store) {
+      const params = new URLSearchParams(window.location.search);
+      window.location.href = params.get("redirect") ?? "/";
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    await login(email, password);
+    setLoading(true);
+    setError(null);
+
+    if (requiresOtp && challengeToken) {
+      const res = await verifyLoginCodeAction({ challenge_token: challengeToken, otp });
+
+      if (!res.ok) {
+        setError(res.message ?? "លេខកូដមិនត្រឹមត្រូវ ឬផុតកំណត់");
+        setLoading(false);
+        return;
+      }
+
+      syncFromCookie();
+      const redirect = new URLSearchParams(window.location.search).get("redirect") ?? "/";
+      window.location.href = redirect;
+      return;
+    }
+
+    const res = await loginAction({
+      email,
+      password,
+      device_name:        getDeviceName(),
+      device_fingerprint: getDeviceFingerprint(),
+    });
+
+    if (!res.ok) {
+      setError(res.message ?? "ចូលគណនីមិនបានសំរេច");
+      setLoading(false);
+      return;
+    }
+
+    if (res.data?.requires_otp) {
+      setChallengeToken(res.data.challenge_token ?? null);
+      setRequiresOtp(true);
+      setLoading(false);
+      return;
+    }
+
+    syncFromCookie();
+    const redirect = new URLSearchParams(window.location.search).get("redirect") ?? "/";
+    window.location.href = redirect;
   }
 
   function handleGoogleLogin() {
@@ -64,27 +137,18 @@ export default function LoginPage() {
               អ៊ីម៉ែល
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "#555" }}>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#555" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
                 </svg>
               </span>
               <input
-                type="email"
-                required
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                type="email" required placeholder="you@example.com"
+                value={email} onChange={(e) => setEmail(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 rounded-xl text-sm outline-none transition-all"
-                style={{
-                  background:  "rgba(255,255,255,0.05)",
-                  border:      "1.5px solid rgba(255,255,255,0.09)",
-                  color:       "#f0f0f0",
-                  caretColor:  "#c9a835",
-                }}
-                onFocus={(e)  => (e.currentTarget.style.borderColor = "rgba(201,168,53,0.5)")}
-                onBlur={(e)   => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)")}
+                style={{ background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.09)", color: "#f0f0f0", caretColor: "#c9a835" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(201,168,53,0.5)")}
+                onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)")}
               />
             </div>
           </div>
@@ -98,34 +162,21 @@ export default function LoginPage() {
               </a>
             </div>
             <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"
-                style={{ color: "#555" }}>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "#555" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                 </svg>
               </span>
               <input
-                type={showPw ? "text" : "password"}
-                required
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type={showPw ? "text" : "password"} required placeholder="••••••••"
+                value={password} onChange={(e) => setPassword(e.target.value)}
                 className="w-full pl-10 pr-10 py-3 rounded-xl text-sm outline-none transition-all"
-                style={{
-                  background:  "rgba(255,255,255,0.05)",
-                  border:      "1.5px solid rgba(255,255,255,0.09)",
-                  color:       "#f0f0f0",
-                  caretColor:  "#c9a835",
-                }}
-                onFocus={(e)  => (e.currentTarget.style.borderColor = "rgba(201,168,53,0.5)")}
-                onBlur={(e)   => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)")}
+                style={{ background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.09)", color: "#f0f0f0", caretColor: "#c9a835" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(201,168,53,0.5)")}
+                onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)")}
               />
-              <button
-                type="button"
-                onClick={() => setShowPw(!showPw)}
-                className="absolute right-3.5 top-1/2 -translate-y-1/2"
-                style={{ color: "#555" }}
-              >
+              <button type="button" onClick={() => setShowPw(!showPw)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2" style={{ color: "#555" }}>
                 {showPw ? (
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
@@ -141,6 +192,31 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* OTP step */}
+          {requiresOtp && (
+            <div>
+              <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg mb-3"
+                style={{ background: "rgba(201,168,53,0.08)", border: "1px solid rgba(201,168,53,0.25)" }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+                <span className="text-xs" style={{ color: "#c9a835" }}>លេខកូដត្រូវបានផ្ញើទៅអ៊ីម៉ែលរបស់អ្នក</span>
+              </div>
+              <label className="block text-xs font-semibold mb-1.5" style={{ color: "#888" }}>
+                លេខកូដបញ្ជាក់
+              </label>
+              <input
+                type="text" inputMode="numeric" pattern="[0-9]*" maxLength={8}
+                required autoFocus placeholder="123456"
+                value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                className="w-full px-4 py-3 rounded-xl text-sm outline-none transition-all text-center tracking-widest font-bold"
+                style={{ background: "rgba(255,255,255,0.05)", border: "1.5px solid rgba(255,255,255,0.09)", color: "#f0f0f0", caretColor: "#c9a835", fontSize: "1.1rem", letterSpacing: "0.25em" }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "rgba(201,168,53,0.5)")}
+                onBlur={(e)  => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.09)")}
+              />
+            </div>
+          )}
+
           {/* Error */}
           {error && (
             <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg"
@@ -153,17 +229,14 @@ export default function LoginPage() {
           )}
 
           {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
+          <button type="submit" disabled={loading}
             className="w-full py-3.5 rounded-xl font-black text-sm tracking-wide transition-all mt-1"
             style={{
               background: loading ? "rgba(255,255,255,0.06)" : "linear-gradient(90deg,#c9a835,#8b6914)",
               color:      loading ? "#444" : "#0d0d12",
               boxShadow:  loading ? "none" : "0 4px 20px rgba(201,168,53,0.35)",
               cursor:     loading ? "not-allowed" : "pointer",
-            }}
-          >
+            }}>
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -171,7 +244,7 @@ export default function LoginPage() {
                 </svg>
                 កំពុងចូល...
               </span>
-            ) : "ចូលគណនី"}
+            ) : requiresOtp ? "បញ្ជាក់លេខកូដ" : "ចូលគណនី"}
           </button>
         </form>
 
@@ -183,17 +256,9 @@ export default function LoginPage() {
         </div>
 
         {/* Google login */}
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
+        <button type="button" onClick={handleGoogleLogin}
           className="flex items-center justify-center gap-3 w-full py-3 rounded-xl text-sm font-semibold transition-all hover:opacity-90 active:scale-95 mb-3"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border:     "1px solid rgba(255,255,255,0.1)",
-            color:      "#e0e0e0",
-          }}
-        >
-          {/* Google "G" logo */}
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#e0e0e0" }}>
           <svg width="18" height="18" viewBox="0 0 48 48">
             <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
             <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
@@ -204,14 +269,9 @@ export default function LoginPage() {
           ចូលដោយ Google
         </button>
 
-        {/* Back home */}
         <a href="/"
           className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-all"
-          style={{
-            background: "rgba(255,255,255,0.04)",
-            border:     "1px solid rgba(255,255,255,0.08)",
-            color:      "#777",
-          }}>
+          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#777" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6"/>
           </svg>
@@ -219,7 +279,6 @@ export default function LoginPage() {
         </a>
       </div>
 
-      {/* Footer note */}
       <p className="mt-6 text-xs text-center" style={{ color: "#444" }}>
         © 2026 168KH · ការប្រើប្រាស់ស្ថិតក្រោមការការពារ
       </p>

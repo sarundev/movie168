@@ -5,23 +5,25 @@ import Image from "next/image";
 import Navbar from "../../components/Navbar";
 import Footer from "../../components/Footer";
 import MovieRow from "../../components/MovieRow";
-import {
-  postComment, rateMovie,
-  reactComment, removeCommentReaction, reportContent,
-  getMovieRating,
-  type ApiMovie, type ApiComment,
-} from "../../lib/api";
+import { getMovieRating, type ApiMovie, type ApiComment } from "../../lib/api";
 import type { ServerUser } from "../../lib/server-auth";
 import { buildPlaybackUrl } from "../../lib/player";
-import { allMovies, type Movie } from "../../data/movies";
 import KhqrPayModal from "../../components/KhqrPayModal";
-import { preparePurchaseKhqrAction, purchaseWithBalanceAction } from "../../actions/movie-actions";
+import {
+  preparePurchaseKhqrAction,
+  purchaseWithBalanceAction,
+  purchaseMovieAction,
+  submitRatingAction,
+  submitCommentAction,
+  replyCommentAction,
+  reactCommentAction,
+  removeCommentReactionAction,
+  submitReportAction,
+} from "../../actions/movie-actions";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const qualityBg: Record<string, string> = { "4K": "#1d4ed8", FHD: "#b45309", HD: "#15803d" };
-
-const topRatedMovies = [...allMovies].sort((a, b) => b.rating - a.rating).slice(0, 10);
 
 const mockCastColors = [
   "linear-gradient(135deg,#7c2d12,#c2410c)",
@@ -65,8 +67,8 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
 
 // ─── Comment item ─────────────────────────────────────────────────────────────
 
-function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
-  comment: ApiComment; movieId: number; token?: string; depth?: number;
+function CommentItem({ comment, movieSlug, isLoggedIn, depth = 0, onReplyAdded }: {
+  comment: ApiComment; movieSlug: string; isLoggedIn: boolean; depth?: number;
   onReplyAdded: (parentId: number, reply: ApiComment) => void;
 }) {
   const [replyOpen, setReplyOpen] = useState(false);
@@ -77,15 +79,15 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
   const [dislikes, setDislikes] = useState(comment.dislikes_count);
 
   async function handleReact(type: "like" | "dislike") {
-    if (!token) return;
+    if (!isLoggedIn) return;
     try {
       if (myReaction === type) {
-        await removeCommentReaction(comment.id, token);
+        await removeCommentReactionAction(comment.id, movieSlug);
         setMyReaction(null);
         if (type === "like") setLikes(l => l - 1); else setDislikes(d => d - 1);
       } else {
         if (myReaction) { if (myReaction === "like") setLikes(l => l - 1); else setDislikes(d => d - 1); }
-        await reactComment(comment.id, type, token);
+        await reactCommentAction(comment.id, movieSlug, type);
         setMyReaction(type);
         if (type === "like") setLikes(l => l + 1); else setDislikes(d => d + 1);
       }
@@ -93,11 +95,15 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
   }
 
   async function submitReply() {
-    if (!token || !replyBody.trim()) return;
+    if (!isLoggedIn || !replyBody.trim()) return;
     setSubmitting(true);
     try {
-      const reply = await postComment(movieId, replyBody.trim(), token, comment.id);
-      onReplyAdded(comment.id, reply);
+      const res = await replyCommentAction(comment.id, movieSlug, replyBody.trim());
+      if (res.ok && res.data) {
+        const raw = res.data as { data?: ApiComment } | ApiComment;
+        const reply = (raw as { data?: ApiComment }).data ?? (raw as ApiComment);
+        onReplyAdded(comment.id, reply);
+      }
       setReplyBody(""); setReplyOpen(false);
     } catch {} finally { setSubmitting(false); }
   }
@@ -134,7 +140,7 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
               </svg>
               {dislikes}
             </button>
-            {token && depth === 0 && (
+            {isLoggedIn && depth === 0 && (
               <button onClick={() => setReplyOpen(r => !r)}
                 className="text-xs transition-colors px-2 py-1.5"
                 style={{ color: "#555", touchAction: "manipulation" }}
@@ -166,7 +172,7 @@ function CommentItem({ comment, movieId, token, depth = 0, onReplyAdded }: {
         </div>
       </div>
       {comment.replies?.map((reply, i) => (
-        <CommentItem key={reply.id ?? i} comment={reply} movieId={movieId} token={token} depth={depth + 1} onReplyAdded={onReplyAdded} />
+        <CommentItem key={reply.id ?? i} comment={reply} movieSlug={movieSlug} isLoggedIn={isLoggedIn} depth={depth + 1} onReplyAdded={onReplyAdded} />
       ))}
     </div>
   );
@@ -180,18 +186,21 @@ export default function MovieDetailClient({
   user,
   initialComments,
   sessionToken,
+  userCreditBalance = 0,
 }: {
   movie: ApiMovie;
   slug: string;
   user: ServerUser | null;
   initialComments: ApiComment[];
   sessionToken: string | null;
+  userCreditBalance?: number;
 }) {
   const token = user?.token;
 
   const [comments,     setComments]     = useState<ApiComment[]>(initialComments);
-  const [myRating,     setMyRating]     = useState(0);
-  const [ratingDone,   setRatingDone]   = useState(false);
+  const initialMyRating = typeof movie.rating === "object" ? (movie.rating?.my_rating ?? 0) : 0;
+  const [myRating,     setMyRating]     = useState(initialMyRating);
+  const [ratingDone,   setRatingDone]   = useState(initialMyRating > 0);
   const [newComment,   setNewComment]   = useState("");
   const [posting,      setPosting]      = useState(false);
   const [reportOpen,   setReportOpen]   = useState(false);
@@ -205,6 +214,7 @@ export default function MovieDetailClient({
   const [khqrModal,    setKhqrModal]    = useState<KhqrModal | null>(null);
   const [buyingKhqr,   setBuyingKhqr]   = useState(false);
   const [buyingBal,    setBuyingBal]    = useState(false);
+  const [buyingBalAct, setBuyingBalAct] = useState(false);
   const [buyMsg,       setBuyMsg]       = useState<string | null>(null);
 
   async function handleBuyKhqr() {
@@ -215,6 +225,10 @@ export default function MovieDetailClient({
       const d = res.data as { payment_url?: string; transaction_id?: string; amount?: number };
       setKhqrModal({ paymentUrl: d.payment_url ?? "", transactionId: d.transaction_id ?? "", amount: `$${d.amount ?? ""}` });
     } else {
+      if (res.message?.toLowerCase().includes("already purchased")) {
+        window.location.href = `/movie/${slug}/player`;
+        return;
+      }
       setBuyMsg(res.message ?? "Could not create payment.");
     }
   }
@@ -224,22 +238,41 @@ export default function MovieDetailClient({
     const res = await purchaseWithBalanceAction(slug);
     setBuyingBal(false);
     if (res.ok) { window.location.reload(); }
-    else { setBuyMsg(res.message ?? "Purchase failed."); }
+    else if (res.message?.toLowerCase().includes("already purchased")) {
+      window.location.href = `/movie/${slug}/player`;
+    } else { setBuyMsg(res.message ?? "Purchase failed."); }
+  }
+
+  async function handleBuyWithBalance() {
+    setBuyingBalAct(true); setBuyMsg(null);
+    const res = await purchaseMovieAction(slug, "balance");
+    setBuyingBalAct(false);
+    if (res.ok) { window.location.reload(); }
+    else if (res.data?.can_watch) {
+      window.location.href = `/movie/${slug}/player`;
+    } else { setBuyMsg(res.message ?? "Purchase failed."); }
   }
 
   async function submitRating(val: number) {
     if (!token) return;
     setMyRating(val);
-    try { await rateMovie(movie.id, val, token); setRatingDone(true); } catch {}
+    try {
+      const res = await submitRatingAction(movie.id, slug, val);
+      if (res.ok) setRatingDone(true);
+    } catch {}
   }
 
   async function submitComment() {
     if (!token || !newComment.trim()) return;
     setPosting(true);
     try {
-      const c = await postComment(movie.id, newComment.trim(), token);
-      setComments(prev => [c, ...prev]);
-      setNewComment("");
+      const res = await submitCommentAction(movie.id, slug, newComment.trim());
+      if (res.ok && res.data) {
+        const raw = res.data as { data?: ApiComment } | ApiComment;
+        const c = (raw as { data?: ApiComment }).data ?? (raw as ApiComment);
+        setComments(prev => [c, ...prev]);
+        setNewComment("");
+      }
     } catch {} finally { setPosting(false); }
   }
 
@@ -250,9 +283,11 @@ export default function MovieDetailClient({
   async function submitReport() {
     if (!token || !reportReason.trim()) return;
     try {
-      await reportContent({ type: "movie", target_id: movie.id, reason: reportReason }, token);
-      setReportSent(true);
-      setTimeout(() => setReportOpen(false), 2000);
+      const res = await submitReportAction("movie", movie.id, reportReason);
+      if (res.ok) {
+        setReportSent(true);
+        setTimeout(() => setReportOpen(false), 2000);
+      }
     } catch {}
   }
 
@@ -260,9 +295,13 @@ export default function MovieDetailClient({
   const miniPoster  = movie.poster_url ?? movie.thumbnail_url;
   const qColor      = qualityBg[movie.quality ?? ""] ?? "#15803d";
   const { average: ratingAvg, count: ratingCount } = getMovieRating(movie);
-  const genreNames: string[] = (movie.genres ?? []).map(g => g.name);
+  const movieGenres = movie.genres ?? [];
   const castNames:  string[] = (movie.casts ?? []).map(c => c.name);
-  const requiresPurchase = movie.purchase?.requires_purchase ?? movie.requires_purchase ?? false;
+  const isPurchased      = movie.purchase?.is_purchased ?? movie.is_purchased ?? false;
+  const requiresPurchase = !isPurchased && (movie.purchase?.requires_purchase ?? movie.requires_purchase ?? false);
+  const paymentMethods   = movie.purchase?.available_payment_methods ?? [];
+  const canBuyCredit     = paymentMethods.includes("credit");
+  const canBuyBalance    = paymentMethods.includes("balance");
 
   const releaseYear = movie.release_year
     ?? (movie.release_date ? new Date(movie.release_date).getFullYear() : undefined);
@@ -270,16 +309,14 @@ export default function MovieDetailClient({
     ? `${Math.floor(movie.runtime_minutes / 60)}h ${movie.runtime_minutes % 60}m` : undefined;
   const defaultSource = movie.sources?.find(s => s.is_default && s.can_watch)
     ?? movie.sources?.find(s => s.can_watch);
-  const related: Movie[] = (movie.related_movies ?? []).length > 0
-    ? (movie.related_movies as ApiMovie[]).map(r => ({
-        id: r.id, slug: r.slug, title: r.title, year: r.release_year ?? 0,
-        rating: typeof r.rating === "object" ? (r.rating?.average ?? 0) : (r.rating ?? 0),
-        duration: "", genres: (r.genres ?? []).map(g => g.name),
-        gradient: r.gradient ?? "#1e1b4b",
-        quality: (r.quality ?? "HD") as "FHD" | "4K" | "HD" | "CAM",
-        image: r.poster_url ?? r.thumbnail_url,
-      }))
-    : allMovies.filter(m => genreNames.some(g => m.genres.includes(g))).slice(0, 10);
+  const related: ApiMovie[] = movie.related_movies ?? [];
+  const sidebarMovies: ApiMovie[] = related.length > 0
+    ? [...related].sort((a, b) => {
+        const ra = typeof a.rating === "object" ? (a.rating?.average ?? 0) : (a.vote_average ?? 0);
+        const rb = typeof b.rating === "object" ? (b.rating?.average ?? 0) : (b.vote_average ?? 0);
+        return rb - ra;
+      }).slice(0, 10)
+    : [];
 
   return (
     <div className="min-h-screen md:pt-4 pt-20" style={{ background: "#111116" }}>
@@ -338,20 +375,31 @@ export default function MovieDetailClient({
                     </p>
                     {buyMsg && <p className="text-xs" style={{ color: "#ef4444" }}>{buyMsg}</p>}
                     <div className="flex flex-col sm:flex-row gap-2">
-                      <button onClick={handleBuyKhqr} disabled={buyingKhqr || buyingBal}
+                      <button onClick={handleBuyKhqr} disabled={buyingKhqr || buyingBal || buyingBalAct}
                         className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90 flex items-center gap-2"
                         style={{ background: "linear-gradient(135deg,#c9a835,#8a6e1a)", color: "#0d0d12",
                           boxShadow: "0 4px 20px rgba(201,168,53,0.35)", cursor: buyingKhqr ? "not-allowed" : "pointer" }}>
                         {buyingKhqr && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
                         ទិញដោយ KHQR
                       </button>
-                      {/* <button onClick={handleBuyBalance} disabled={buyingKhqr || buyingBal}
-                        className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-80 flex items-center gap-2"
-                        style={{ background: "rgba(201,168,53,0.1)", border: "1px solid rgba(201,168,53,0.4)", color: "#c9a835",
-                          cursor: buyingBal ? "not-allowed" : "pointer" }}>
-                        {buyingBal && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
-                        ទិញដោយ Credit
-                      </button> */}
+                      {canBuyBalance && !backdropErr && (
+                        <button onClick={handleBuyWithBalance} disabled={buyingKhqr || buyingBal || buyingBalAct}
+                          className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-80 flex items-center gap-2"
+                          style={{ background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.4)", color: "#34d399",
+                            cursor: buyingBalAct ? "not-allowed" : "pointer" }}>
+                          {buyingBalAct && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
+                          ទិញដោយ Balance
+                        </button>
+                      )}
+                      {canBuyCredit && !backdropErr && (
+                        <button onClick={handleBuyBalance} disabled={buyingKhqr || buyingBal || buyingBalAct}
+                          className="px-5 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-80 flex items-center gap-2"
+                          style={{ background: "rgba(201,168,53,0.1)", border: "1px solid rgba(201,168,53,0.4)", color: "#c9a835",
+                            cursor: buyingBal ? "not-allowed" : "pointer" }}>
+                          {buyingBal && <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>}
+                          ទិញដោយ Credit
+                        </button>
+                      )}
                     </div>
                   </>
                 ) : (
@@ -447,11 +495,11 @@ export default function MovieDetailClient({
                   )}
 
                   <div className="flex flex-wrap gap-1.5">
-                    {genreNames.map(name => (
-                      <a key={name} href={`/movies?genre=${name.toLowerCase()}`}
+                    {movieGenres.map(g => (
+                      <a key={g.id} href={`/movies?genre=${g.slug ?? g.name.toLowerCase()}`}
                         className="text-[11px] px-2.5 py-0.5 rounded transition-colors hover:text-amber-400"
                         style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#aaa" }}>
-                        {name}
+                        {g.name}
                       </a>
                     ))}
                   </div>
@@ -590,7 +638,7 @@ export default function MovieDetailClient({
               ) : (
                 <div className="space-y-1">
                   {comments.map((c, i) => (
-                    <CommentItem key={c.id ?? i} comment={c} movieId={movie.id} token={token} onReplyAdded={handleReplyAdded} />
+                    <CommentItem key={c.id ?? i} comment={c} movieSlug={slug} isLoggedIn={!!token} onReplyAdded={handleReplyAdded} />
                   ))}
                 </div>
               )}
@@ -614,14 +662,14 @@ export default function MovieDetailClient({
                 </div>
               </div>
               <div className="lg:hidden flex overflow-x-auto gap-3 px-3 py-3 hide-scrollbar">
-                {topRatedMovies.map(m => (
-                  <a key={m.id} href={`/movie/${m.slug ?? m.id}`}
+                {sidebarMovies.map(m => (
+                  <a key={m.id} href={`/movie/${m.slug}`}
                     className="flex flex-col shrink-0 gap-1.5 group" style={{ touchAction: "manipulation" }}>
                     <div className="relative rounded-lg overflow-hidden"
                       style={{ width: "68px", height: "95px", background: "#2a2a35" }}>
-                      {m.image && (
+                      {(m.poster_url ?? m.thumbnail_url) && (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={m.image} alt={m.title} className="absolute inset-0 w-full h-full object-cover"
+                        <img src={m.poster_url ?? m.thumbnail_url} alt={m.title} className="absolute inset-0 w-full h-full object-cover"
                           loading="lazy"
                           onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                       )}
@@ -632,17 +680,17 @@ export default function MovieDetailClient({
                 ))}
               </div>
               <div className="hidden lg:block">
-                {topRatedMovies.map(m => (
-                  <a key={m.id} href={`/movie/${m.slug ?? m.id}`}
+                {sidebarMovies.map(m => (
+                  <a key={m.id} href={`/movie/${m.slug}`}
                     className="flex items-center gap-3 px-3 py-2.5 transition-colors group"
                     style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
                     onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
                     onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                     <div className="relative rounded-lg overflow-hidden shrink-0"
                       style={{ width: "56px", height: "78px", background: "#2a2a35" }}>
-                      {m.image && (
+                      {(m.poster_url ?? m.thumbnail_url) && (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={m.image} alt={m.title} className="absolute inset-0 w-full h-full object-cover"
+                        <img src={m.poster_url ?? m.thumbnail_url} alt={m.title} className="absolute inset-0 w-full h-full object-cover"
                           loading="lazy"
                           onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
                       )}
@@ -650,7 +698,7 @@ export default function MovieDetailClient({
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold leading-snug line-clamp-2 group-hover:text-amber-400 transition-colors"
                         style={{ color: "#ddd" }}>{m.title}</p>
-                      <p className="text-[10px] mt-1" style={{ color: "#555" }}>{m.year}</p>
+                      <p className="text-[10px] mt-1" style={{ color: "#555" }}>{m.release_year ?? ""}</p>
                     </div>
                   </a>
                 ))}

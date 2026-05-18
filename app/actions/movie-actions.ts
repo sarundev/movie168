@@ -83,6 +83,24 @@ export async function preparePurchaseKhqrAction(
   }
 }
 
+export async function purchaseMovieAction(
+  movieSlug: string,
+  paymentMethod: "balance" | "credit",
+): Promise<ActionResult<{ can_watch?: boolean; message?: string; wallet?: { balance?: number; credits?: number } }>> {
+  try {
+    const data = await serverApi(`/movies/${encodeURIComponent(movieSlug)}/purchase`, {
+      method: "POST",
+      withAuth: true,
+      body: JSON.stringify({ payment_method: paymentMethod }),
+    });
+    revalidatePath(`/movie/${movieSlug}`);
+    return { ok: true, data };
+  } catch (error) {
+    const e = isApiError(error) ? error : null;
+    return { ok: false, status: e?.status, message: extractMessage(error, "Could not purchase movie."), errors: e?.errors };
+  }
+}
+
 export async function purchaseWithBalanceAction(
   movieSlug: string,
 ): Promise<ActionResult> {
@@ -96,6 +114,41 @@ export async function purchaseWithBalanceAction(
   } catch (error) {
     const e = isApiError(error) ? error : null;
     return { ok: false, status: e?.status, message: extractMessage(error, "Could not purchase with balance."), errors: e?.errors };
+  }
+}
+
+export async function createBalanceTopUpAction(
+  amount: number,
+): Promise<ActionResult<{ payment_url?: string; transaction_id?: string; amount?: number }>> {
+  try {
+    const data = await serverApi("/me/balance/pay-khqr", {
+      method: "POST",
+      withAuth: true,
+      body: JSON.stringify({ amount }),
+    });
+    return { ok: true, data };
+  } catch (error) {
+    const e = isApiError(error) ? error : null;
+    return { ok: false, status: e?.status, message: extractMessage(error, "Could not create balance top-up payment."), errors: e?.errors };
+  }
+}
+
+export async function createCreditPayWayAction(
+  credits: number,
+): Promise<ActionResult<{
+  success?: boolean; payment_id?: number; tran_id?: string;
+  qr_string?: string; qr_image?: string; abapay_deeplink?: string; status?: string;
+}>> {
+  try {
+    const data = await serverApi("/payway/create-payment", {
+      method: "POST",
+      withAuth: true,
+      body: JSON.stringify({ amount: credits }),
+    });
+    return { ok: true, data };
+  } catch (error) {
+    const e = isApiError(error) ? error : null;
+    return { ok: false, status: e?.status, message: extractMessage(error, "Could not create PayWay payment."), errors: e?.errors };
   }
 }
 
@@ -215,5 +268,42 @@ export async function removeCommentReactionAction(
   } catch (error) {
     const e = isApiError(error) ? error : null;
     return { ok: false, status: e?.status, message: extractMessage(error, "Could not remove reaction."), errors: e?.errors };
+  }
+}
+
+export async function replyCommentAction(
+  commentId: number,
+  movieSlug: string,
+  body: string,
+): Promise<ActionResult> {
+  try {
+    const data = await serverApi(`/comments/${commentId}/reply`, {
+      method: "POST",
+      withAuth: true,
+      body: JSON.stringify({ body }),
+    });
+    revalidatePath(`/movie/${movieSlug}`);
+    return { ok: true, data };
+  } catch (error) {
+    const e = isApiError(error) ? error : null;
+    return { ok: false, status: e?.status, message: extractMessage(error, "Failed to submit reply."), errors: e?.errors };
+  }
+}
+
+export async function submitReportAction(
+  targetType: "movie" | "comment",
+  targetId: number,
+  reason: string,
+): Promise<ActionResult> {
+  try {
+    const data = await serverApi("/reports", {
+      method: "POST",
+      withAuth: true,
+      body: JSON.stringify({ type: targetType, target_id: targetId, reason }),
+    });
+    return { ok: true, data };
+  } catch (error) {
+    const e = isApiError(error) ? error : null;
+    return { ok: false, status: e?.status, message: extractMessage(error, "Could not submit report."), errors: e?.errors };
   }
 }
