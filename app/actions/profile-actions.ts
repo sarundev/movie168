@@ -10,13 +10,10 @@ export type ActionResult<T = unknown> = {
   message?: string;
   data?: T;
 };
-
 type ApiActionError = { status?: number; message?: string };
-
 function toError(e: unknown): ApiActionError {
   return typeof e === "object" && e !== null ? (e as ApiActionError) : { message: String(e) };
 }
-
 export async function fetchProfileAction(): Promise<ActionResult<ApiUser>> {
   try {
     const raw = await serverApi<{ data: ApiUser } | ApiUser>("/me", { withAuth: true });
@@ -27,7 +24,6 @@ export async function fetchProfileAction(): Promise<ActionResult<ApiUser>> {
     return { ok: false, status: err.status, message: err.message ?? "Could not load profile." };
   }
 }
-
 export async function fetchWatchHistoryAction(): Promise<ActionResult<ApiWatchHistory[]>> {
   try {
     const raw = await serverApi<{ data: ApiWatchHistory[] } | ApiWatchHistory[]>(
@@ -41,7 +37,6 @@ export async function fetchWatchHistoryAction(): Promise<ActionResult<ApiWatchHi
     return { ok: false, status: err.status, message: err.message ?? "Could not load watch history." };
   }
 }
-
 export async function fetchMyPurchasesAction(): Promise<ActionResult<ApiPurchase[]>> {
   try {
     const raw = await serverApi<{ data: ApiPurchase[] } | ApiPurchase[]>(
@@ -55,16 +50,13 @@ export async function fetchMyPurchasesAction(): Promise<ActionResult<ApiPurchase
     return { ok: false, status: err.status, message: err.message ?? "Could not load purchases." };
   }
 }
-
 export async function updatePasswordAction(
   currentPassword: string,
   newPassword: string,
   newPasswordConfirmation: string,
 ): Promise<ActionResult> {
   try {
-    const profile = await serverApi<{ data: { name: string } } | { name: string }>("/me", {
-      withAuth: true,
-    });
+    const profile = await serverApi<{ data: { name: string } } | { name: string }>("/me", { withAuth: true });
     const name = (profile as { data: { name: string } }).data?.name ?? (profile as { name: string }).name;
 
     const data = await serverApi("/me/profile", {

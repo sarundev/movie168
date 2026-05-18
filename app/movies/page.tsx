@@ -23,24 +23,17 @@ function qualityInfo(q: string): { label: string; sub: string } {
   return { label: q, sub: "" };
 }
 
-function fmtDate(releaseDate?: string, year?: number): string {
-  if (releaseDate) {
-    const d = new Date(releaseDate + "T00:00:00");
-    const m = ["Jan.","Feb.","Mar.","Apr.","May","Jun.","Jul.","Aug.","Sep.","Oct.","Nov.","Dec."];
-    return `${m[d.getMonth()]} ${String(d.getDate()).padStart(2,"0")}, ${d.getFullYear()}`;
-  }
-  return year ? String(year) : "";
-}
 
 interface DisplayMovie {
   id: number;
   slug: string;
   title: string;
+  originalTitle?: string;
   year: number;
-  releaseDate?: string;
   rating: number;
   quality: string;
   badge?: string;
+  price?: number;
   gradient: string;
   image?: string;
 }
@@ -48,16 +41,17 @@ interface DisplayMovie {
 function toDisplay(m: ApiMovie): DisplayMovie {
   const { average } = getMovieRating(m);
   return {
-    id:          m.id,
-    slug:        m.slug,
-    title:       m.title,
-    year:        m.release_year ?? (m.release_date ? new Date(m.release_date).getFullYear() : 0),
-    releaseDate: m.release_date,
-    rating:      average,
-    quality:     m.quality ?? "HD",
-    badge:       m.badge,
-    gradient:    m.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)",
-    image:       m.poster_url ?? m.thumbnail_url ?? m.backdrop_url,
+    id:            m.id,
+    slug:          m.slug,
+    title:         m.title,
+    originalTitle: m.original_title,
+    year:          m.release_year ?? (m.release_date ? new Date(m.release_date).getFullYear() : 0),
+    rating:        average,
+    quality:       m.quality ?? "HD",
+    badge:         m.badge,
+    price:         m.price,
+    gradient:      m.gradient ?? "linear-gradient(135deg,#1e1b4b,#0d0d12)",
+    image:         m.poster_url ?? m.thumbnail_url ?? m.backdrop_url,
   };
 }
 
@@ -388,21 +382,20 @@ export default function MoviesPage() {
               <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2 sm:gap-4">
                 {displayed.map(movie => {
                   const qColor = qualityBg[movie.quality] ?? "#15803d";
-                  const { label: qLabel, sub: qSub } = qualityInfo(movie.quality);
-                  const dateText = fmtDate(movie.releaseDate, movie.year);
+                  const { label: qLabel } = qualityInfo(movie.quality);
                   return (
-                    <a key={movie.id} href={`/movie/${movie.slug}`} className="group cursor-pointer">
+                    <a key={movie.id} href={`/movie/${movie.slug}`} className="group cursor-pointer block">
                       <div
-                        className="relative rounded-lg sm:rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.03]"
+                        className="relative rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.03]"
                         style={{
                           aspectRatio: "2/3",
                           background: movie.gradient,
-                          border: "1px solid rgba(255,255,255,0.06)",
-                          boxShadow: "0 2px 10px rgba(0,0,0,0.5)",
+                          boxShadow: "0 2px 12px rgba(0,0,0,0.6)",
                         }}
-                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 28px rgba(201,168,53,0.28), 0 0 0 1.5px rgba(201,168,53,0.4)"; }}
-                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 10px rgba(0,0,0,0.5)"; }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 30px rgba(201,168,53,0.3), 0 0 0 1.5px rgba(201,168,53,0.45)"; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.boxShadow = "0 2px 12px rgba(0,0,0,0.6)"; }}
                       >
+                        {/* Poster image */}
                         {movie.image && (
                           <img src={movie.image} alt={movie.title}
                             className="absolute inset-0 w-full h-full object-cover object-top"
@@ -410,45 +403,64 @@ export default function MoviesPage() {
                             onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                           />
                         )}
-                        <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.65) 0%,transparent 45%)" }} />
-                        <div className="absolute top-1.5 left-1.5 font-black rounded leading-none"
-                          style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background:"rgba(0,0,0,0.55)", color:"#c9a835" }}>
-                          168
-                        </div>
-                        {movie.badge && (
-                          <span className="absolute top-1.5 right-1.5 font-black rounded tracking-widest"
-                            style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background: badgeBg[movie.badge] ?? "#c9a835", color:"white" }}>
+
+                        {/* Bottom gradient overlay */}
+                        <div className="absolute inset-0" style={{ background:"linear-gradient(to top,rgba(0,0,0,0.92) 0%,rgba(0,0,0,0.4) 40%,transparent 65%)" }} />
+
+                        {/* Top-left: price badge */}
+                        {movie.price && movie.price > 0 ? (
+                          <span className="absolute top-2 left-2 font-black rounded-md leading-none"
+                            style={{ fontSize:"clamp(8px,1.9vw,11px)", padding:"3px 7px", background:"#e50914", color:"white", letterSpacing:"0.02em" }}>
+                            ${movie.price}
+                          </span>
+                        ) : movie.badge ? (
+                          <span className="absolute top-2 left-2 font-black rounded-md leading-none"
+                            style={{ fontSize:"clamp(8px,1.9vw,11px)", padding:"3px 7px", background: badgeBg[movie.badge] ?? "#c9a835", color:"white" }}>
                             {movie.badge}
                           </span>
-                        )}
-                        <div className="absolute bottom-1.5 left-1.5 flex items-center rounded overflow-hidden">
-                          <span className="font-black" style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background: qColor, color:"white" }}>
-                            {qLabel}
-                          </span>
-                          {qSub && (
-                            <span className="font-black" style={{ fontSize:"clamp(7px,1.8vw,9px)", padding:"2px 5px", background:"rgba(0,0,0,0.82)", color:"#ccc" }}>
-                              {qSub}
-                            </span>
+                        ) : null}
+
+                        {/* Top-right: quality badge */}
+                        <span className="absolute top-2 right-2 font-black rounded-md leading-none"
+                          style={{ fontSize:"clamp(8px,1.9vw,11px)", padding:"3px 7px", background: qColor, color:"white" }}>
+                          {qLabel}
+                        </span>
+
+                        {/* Bottom info overlay */}
+                        <div className="absolute bottom-0 left-0 right-0 px-2 pb-2.5 pt-6">
+                          <p className="font-bold line-clamp-1 leading-snug"
+                            style={{ color:"#ffffff", fontSize:"clamp(9px,2.6vw,13px)" }}>
+                            {movie.title}
+                          </p>
+                          {movie.originalTitle && movie.originalTitle !== movie.title && (
+                            <p className="line-clamp-1 leading-snug mt-0.5"
+                              style={{ color:"rgba(255,255,255,0.6)", fontSize:"clamp(8px,2.2vw,11px)" }}>
+                              {movie.originalTitle}
+                            </p>
                           )}
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span style={{ color:"#aaa", fontSize:"clamp(8px,2vw,10px)" }}>
+                              {movie.year || ""}
+                            </span>
+                            {movie.rating > 0 && (
+                              <span className="flex items-center gap-0.5" style={{ color:"#f5c518", fontSize:"clamp(8px,2vw,10px)" }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="#f5c518"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                {movie.rating.toFixed(1)}
+                              </span>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Hover play button */}
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          style={{ background:"rgba(0,0,0,0.5)" }}>
+                          style={{ background:"rgba(0,0,0,0.35)" }}>
                           <div className="w-11 h-11 rounded-full flex items-center justify-center"
-                            style={{ background:"rgba(201,168,53,0.9)", boxShadow:"0 0 24px rgba(201,168,53,0.5)" }}>
+                            style={{ background:"rgba(201,168,53,0.92)", boxShadow:"0 0 24px rgba(201,168,53,0.55)" }}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="#0d0d12">
                               <polygon points="5 3 19 12 5 21 5 3"/>
                             </svg>
                           </div>
                         </div>
-                      </div>
-                      <div className="mt-1.5 px-0.5">
-                        <p className="font-semibold line-clamp-2 leading-tight transition-colors group-hover:text-amber-400"
-                          style={{ color:"#e5e5e5", fontSize:"clamp(10px,2.8vw,13px)" }}>
-                          {movie.title}
-                        </p>
-                        <p className="mt-0.5" style={{ color:"#777", fontSize:"clamp(9px,2.3vw,11px)" }}>
-                          {dateText}
-                        </p>
                       </div>
                     </a>
                   );

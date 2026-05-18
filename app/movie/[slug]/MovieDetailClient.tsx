@@ -9,6 +9,7 @@ import { getMovieRating, type ApiMovie, type ApiComment } from "../../lib/api";
 import type { ServerUser } from "../../lib/server-auth";
 import { buildPlaybackUrl } from "../../lib/player";
 import KhqrPayModal from "../../components/KhqrPayModal";
+import TrailerSection from "../../components/TrailerSection";
 import {
   preparePurchaseKhqrAction,
   purchaseWithBalanceAction,
@@ -530,6 +531,9 @@ export default function MovieDetailClient({
                 <p className="text-sm leading-relaxed" style={{ color: "#999" }}>{movie.overview}</p>
               </div>
             )}
+
+            {/* Trailers */}
+            <TrailerSection trailers={movie.trailers ?? []} />
 
             {/* Cast */}
             {castNames.length > 0 && (
