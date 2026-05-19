@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cache } from "react";
+import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { fetchMovieDetail, fetchComments, fetchMe, canWatchMovie, getMovieRating, type ApiMovie } from "../../lib/api";
@@ -61,7 +61,9 @@ export default async function MovieDetailPage({
   return (
     <div className="min-h-screen md:pt-4 pt-20" style={{ background: "#111116" }}>
       <Navbar />
-      <MovieDetailShell slug={slug} />
+      <Suspense fallback={<div className="flex items-center justify-center py-32"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>}>
+        <MovieDetailShell slug={slug} />
+      </Suspense>
       <div className="gold-divider mx-4 sm:mx-6 lg:mx-12 mb-2" />
       <Footer />
     </div>

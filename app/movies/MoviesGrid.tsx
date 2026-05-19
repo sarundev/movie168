@@ -88,7 +88,6 @@ export default function MoviesGrid({
     [sort, genre, quality, search],
   );
 
-  // Reset and reload when filters change (skip initial fetch — data from server)
   useEffect(() => {
     if (hasInitialData.current) {
       hasInitialData.current = false;
@@ -155,11 +154,13 @@ export default function MoviesGrid({
 
   return (
     <>
-      <p className="text-sm mb-3" style={{ color: "#666" }}>
-        {`${displayed.length}${hasMore ? "+" : ""} titles`}
-      </p>
 
-      {loading ? null : displayed.length === 0 ? (
+
+      {loading ? (
+        <div className="flex items-center justify-center py-24">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        </div>
+      ) : displayed.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
           <div className="text-5xl">🎬</div>
           <p className="text-lg font-semibold" style={{ color: "#555" }}>

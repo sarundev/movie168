@@ -122,7 +122,8 @@ function MovieCard({ title, image, progress, slug, id }: {
             <PlayIcon />
           </div>
         </div>
-      </div>
+
+        </div>
 
       <p className="text-xs line-clamp-1 font-medium" style={{ color: "#bbb" }}>{title}</p>
     </Link>
@@ -217,7 +218,7 @@ export default function ProfileContent({
   const avatarStorageKey = clientUser ? `avatar_${(clientUser as { id?: number; email?: string }).id ?? (clientUser as { id?: number; email?: string }).email}` : null;
 
   useEffect(() => {
-    if (!clientUser) { setLoadingData(false); return; }
+    if (!clientUser) return;
     const local = avatarStorageKey ? localStorage.getItem(avatarStorageKey) : null;
     if (local) setAvatarSrc(local);
   }, [clientUser]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -355,16 +356,20 @@ export default function ProfileContent({
             <div className="mb-5 -mx-6" style={{ height: 1, background: "rgba(255,255,255,0.05)" }} />
 
             {/* Stats row */}
-            {loadingData ? null : (
-              <div className="flex justify-around">
-                <StatPill value={totalWatched} label="រឿងបានមើល" />
-                <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
-                <StatPill value={totalBuy} label="ចំនួនទិញ" accent="#a855f7" />
-                <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
-                <StatPill value={`$${balanceAmt.toFixed(2)}`} label="Balance" accent="#34d399" />
-                <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
-                <StatPill value={`$${credits.toFixed(2)}`} label="Credits" accent="#c9a835" />
+            {loadingData ? (
+              <div className="flex items-center justify-center py-6">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
               </div>
+            ) : (
+              <div className="flex justify-around">
+              <StatPill value={totalWatched} label="រឿងបានមើល" />
+              <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
+              <StatPill value={totalBuy} label="ចំនួនទិញ" accent="#a855f7" />
+              <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
+              <StatPill value={`$${balanceAmt.toFixed(2)}`} label="Balance" accent="#34d399" />
+              <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
+              <StatPill value={`$${credits.toFixed(2)}`} label="Credits" accent="#c9a835" />
+            </div>
             )}
           </div>
         </div>
