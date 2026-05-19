@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { registerAction } from "../actions/auth-actions";
 
 function getDeviceName(): string {
@@ -108,10 +109,10 @@ export default function RegisterForm() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12" style={{ background: "#0d0d12" }}>
-      <a href="/" className="flex items-center gap-2 mb-10">
+      <Link href="/" className="flex items-center gap-2 mb-10">
         <span className="font-black text-2xl tracking-widest" style={{ color: "#e8c84a" }}>168</span>
         <span className="font-black text-2xl tracking-widest text-green-500">KH</span>
-      </a>
+      </Link>
 
       <div className="w-full max-w-sm rounded-2xl p-7"
         style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 16px 64px rgba(0,0,0,0.6)" }}>
@@ -262,13 +263,13 @@ export default function RegisterForm() {
           ចុះឈ្មោះដោយ Google
         </button>
 
-        <a href="/" className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-all"
+        <Link href="/" className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold transition-all"
           style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", color: "#777" }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="m15 18-6-6 6-6"/>
           </svg>
           ត្រឡប់ទំព័រដើម
-        </a>
+        </Link>
       </div>
 
       <p className="mt-6 text-xs text-center" style={{ color: "#444" }}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { verifyLoginCodeAction, resendLoginCodeAction } from "../actions/auth-actions";
 import { useAuth } from "../context/AuthContext";
@@ -64,10 +65,10 @@ export default function VerifyOtpForm() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-4" style={{ background: "#0d0d12" }}>
-      <a href="/" className="flex items-center gap-2 mb-10">
+      <Link href="/" className="flex items-center gap-2 mb-10">
         <span className="font-black text-2xl tracking-widest" style={{ color: "#e8c84a" }}>168</span>
         <span className="font-black text-2xl tracking-widest text-green-500">KH</span>
-      </a>
+      </Link>
 
       <div className="w-full max-w-sm rounded-2xl p-7"
         style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", boxShadow: "0 16px 64px rgba(0,0,0,0.6)" }}>

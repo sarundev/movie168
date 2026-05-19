@@ -94,7 +94,7 @@ export default function SeriesGrid({
       .finally(() => { if (!cancelled) setLoading(false); });
 
     return () => { cancelled = true; };
-  }, [buildParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [buildParams]);
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !hasMore) return;

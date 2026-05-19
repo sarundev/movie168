@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { cache, Suspense } from "react";
-import { notFound } from "next/navigation";
+
 import Link from "next/link";
-import { fetchMovieDetail, fetchComments, fetchMe, canWatchMovie, getMovieRating, type ApiMovie } from "../../lib/api";
+import { fetchMovieDetail, fetchComments, canWatchMovie, getMovieRating, type ApiMovie } from "../../lib/api";
 import { getServerUser } from "../../lib/server-auth";
 import { buildPlaybackUrl } from "../../lib/player";
 import Navbar from "../../components/Navbar";

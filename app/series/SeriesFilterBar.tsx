@@ -37,10 +37,6 @@ export default function SeriesFilterBar({
   const [searchInput, setSearchInput] = useState(search);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    setSearchInput(search);
-  }, [search]);
-
   const buildHref = useCallback(
     (overrides: Record<string, string | undefined>) => {
       const p = new URLSearchParams();

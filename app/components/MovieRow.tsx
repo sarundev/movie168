@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import MovieCard from "./MovieCard";
-import { getMovieRating, type ApiMovie } from "../lib/api";
+import type { ApiMovie } from "../lib/api";
 
 interface MovieRowProps {
   title: string;

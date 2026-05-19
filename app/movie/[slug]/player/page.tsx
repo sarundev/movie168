@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { fetchMovieDetail, canWatchMovie } from "../../../lib/api";
 import { getServerUser } from "../../../lib/server-auth";
 import { serverApi } from "../../../lib/server-api";
@@ -22,8 +23,8 @@ export default async function PlayerPage({
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#000" }}>
         <p className="text-sm" style={{ color: "#ef4444" }}>រឿងមិនត្រូវបានរកឃើញ</p>
-        <a href="/" className="px-6 py-2.5 rounded-xl text-sm font-semibold"
-          style={{ background: "rgba(255,255,255,0.08)", color: "#888" }}>← ទំព័រដើម</a>
+        <Link href="/" className="px-6 py-2.5 rounded-xl text-sm font-semibold"
+          style={{ background: "rgba(255,255,255,0.08)", color: "#888" }}>← ទំព័រដើម</Link>
       </div>
     );
   }
@@ -32,8 +33,8 @@ export default async function PlayerPage({
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#000" }}>
         <p className="text-sm" style={{ color: "#ef4444" }}>រឿងមិនត្រូវបានរកឃើញ</p>
-        <a href="/" className="px-6 py-2.5 rounded-xl text-sm font-semibold"
-          style={{ background: "rgba(255,255,255,0.08)", color: "#888" }}>← ទំព័រដើម</a>
+        <Link href="/" className="px-6 py-2.5 rounded-xl text-sm font-semibold"
+          style={{ background: "rgba(255,255,255,0.08)", color: "#888" }}>← ទំព័រដើម</Link>
       </div>
     );
   }

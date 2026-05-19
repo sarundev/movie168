@@ -80,27 +80,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  /* restore session on mount */
+  /* restore persisted auth on mount (intentional setState after hydration) */
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
+    /* eslint-disable react-hooks/set-state-in-effect */
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
         const authUser = JSON.parse(raw) as AuthUser;
         setUser(authUser);
         if (authUser.token && authUser.token !== "__server__") {
-          // Re-establish httpOnly cookie if it was cleared
           fetch("/api/auth/session", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ token: authUser.token, user: authUser }),
           }).catch(() => {});
         }
-      } else {
-        // No localStorage — check if server-action cookie exists
-        syncFromCookie();
-      }
-    } catch {}
-  }, [syncFromCookie]);
+      } catch {}
+    } else {
+      syncFromCookie();
+    }
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
@@ -196,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
     router.push("/");
     router.refresh();
-  }, [user]);
+  }, [user, router]);
 
   return (
     <AuthContext.Provider value={{ user, loading, error, login, register, logout, syncFromCookie }}>

@@ -1,22 +1,3 @@
-const columns = [
-  {
-    title: "Navigation",
-    links: ["Home", "Movies", "TV Series", "Episodes", "Explore"],
-  },
-  {
-    title: "Genres",
-    links: ["Action", "Drama", "Sci-Fi", "Horror", "Romance", "Animation"],
-  },
-  {
-    title: "Help",
-    links: ["FAQ", "Contact Us", "Report a Bug", "Accessibility"],
-  },
-  {
-    title: "Legal",
-    links: ["Privacy Policy", "Terms of Service", "Cookie Settings", "DMCA"],
-  },
-];
-
 export default function Footer() {
   return (
     <footer

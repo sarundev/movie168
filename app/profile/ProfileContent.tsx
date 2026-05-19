@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useAuth } from "../context/AuthContext";
@@ -203,25 +203,25 @@ export default function ProfileContent({
   const { user: authUser, logout, loading: authLoading } = useAuth();
   const clientUser = authUser ?? initialUser;
   const [activeTab, setActiveTab] = useState<"history" | "saved" | "settings">("history");
-  const [avatarSrc, setAvatarSrc] = useState<string | null>(initialProfile?.avatar_url ?? initialProfile?.avatar ?? null);
+  const [avatarSrc, setAvatarSrc] = useState<string | null>(() => {
+    const initial = initialProfile?.avatar_url ?? initialProfile?.avatar ?? null;
+    if (typeof window === "undefined") return initial;
+    const key = clientUser ? `avatar_${(clientUser as { id?: number; email?: string }).id ?? (clientUser as { id?: number; email?: string }).email}` : null;
+    if (!key) return initial;
+    try { return localStorage.getItem(key) ?? initial; } catch { return initial; }
+  });
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [pwModalOpen,     setPwModalOpen]     = useState(false);
   const [pwSuccess,       setPwSuccess]       = useState(false);
 
   const [profile,    setProfile]    = useState<ApiUser | null>(initialProfile);
-  const [history,    setHistory]    = useState<ApiWatchHistory[]>(initialHistory);
-  const [purchases,  setPurchases]  = useState<ApiPurchase[]>(initialPurchases);
-  const [balanceAmt, setBalanceAmt] = useState<number>(initialBalance);
-  const [credits,    setCredits]    = useState<number>(initialCredits);
-  const [loadingData, setLoadingData] = useState(!clientUser);
+  const [history]    = useState<ApiWatchHistory[]>(initialHistory);
+  const [purchases]  = useState<ApiPurchase[]>(initialPurchases);
+  const [balanceAmt] = useState<number>(initialBalance);
+  const [credits]    = useState<number>(initialCredits);
+  const [loadingData] = useState(!clientUser);
 
   const avatarStorageKey = clientUser ? `avatar_${(clientUser as { id?: number; email?: string }).id ?? (clientUser as { id?: number; email?: string }).email}` : null;
-
-  useEffect(() => {
-    if (!clientUser) return;
-    const local = avatarStorageKey ? localStorage.getItem(avatarStorageKey) : null;
-    if (local) setAvatarSrc(local);
-  }, [clientUser]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleAvatarSelect(file: File) {
     if (!clientUser) return;

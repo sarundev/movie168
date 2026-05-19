@@ -20,28 +20,6 @@ const COUNTRY_LABELS: Record<string, string> = {
   TW: "តៃវ៉ាន់",
 };
 
-const staticNavItems = [
-  {
-    label: "រឿង ដុំ",
-    href: "/movies",
-    dropdown: [
-      { label: "រឿងជំទាំងអស់", href: "/movies" },
-      { label: "រឿងថ្មី", href: "/movies?sort=newest" },
-      { label: "រឿងពេញនិយម", href: "/movies?sort=popular" },
-      { label: "ចំណាត់ថ្នាក់ខ្ពស់", href: "/movies?sort=rating" },
-    ],
-  },
-  {
-    label: "រឿង ភាគ",
-    href: "/series",
-    dropdown: [
-      { label: "រឿងភាគទាំងអស់", href: "/series" },
-      { label: "K-Drama", href: "/series?genre=k-drama" },
-      { label: "កំពុង放映", href: "/series?status=ongoing" },
-      { label: "បញ្ចប់ហើយ", href: "/series?status=completed" },
-    ],
-  },
-];
 
 
 
@@ -60,39 +38,35 @@ export default function Navbar({ initialGenres, initialCountries }: NavbarProps 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const dropdownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userMenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [genres, setGenres] = useState<ApiGenre[]>(initialGenres ?? []);
-  const [countries, setCountries] = useState<{ label: string; value: string }[]>(initialCountries ?? []);
-
-  useEffect(() => {
-    // Skip client fetch when the server already provided data
-    if (initialGenres && initialCountries) return;
-
-    const NAV_CACHE_KEY = "nav_filters_v1";
-    const NAV_CACHE_TTL = 10 * 60 * 1000;
+  function initFromCache<T>(key: string, field: string, fallback: T): T {
+    if (typeof window === "undefined") return fallback;
     try {
-      const raw = sessionStorage.getItem(NAV_CACHE_KEY);
+      const raw = sessionStorage.getItem(key);
       if (raw) {
-        const { genres: g, countries: c, ts } = JSON.parse(raw);
-        if (Date.now() - ts < NAV_CACHE_TTL) {
-          setGenres(g);
-          setCountries(c);
-          return;
-        }
+        const { ts, [field]: val } = JSON.parse(raw);
+        if (Date.now() - ts < 600000) return val;
       }
     } catch {}
+    return fallback;
+  }
 
+  const [genres, setGenres] = useState<ApiGenre[]>(() => initFromCache<ApiGenre[]>("nav_filters_v1", "genres", initialGenres ?? []));
+  const [countries, setCountries] = useState<{ label: string; value: string }[]>(() => initFromCache<{ label: string; value: string }[]>("nav_filters_v1", "countries", initialCountries ?? []));
+
+  useEffect(() => {
+    if (genres.length > 0 && countries.length > 0) return;
     fetchMovieFilters()
       .then((f) => {
         setGenres(f.genres);
         setCountries(f.countries);
         try {
-          sessionStorage.setItem(NAV_CACHE_KEY, JSON.stringify({
+          sessionStorage.setItem("nav_filters_v1", JSON.stringify({
             genres: f.genres, countries: f.countries, ts: Date.now(),
           }));
         } catch {}
       })
       .catch(() => {});
-  }, [initialGenres, initialCountries]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const genreDropdown = genres.length > 0
     ? genres.map((g) => ({ label: g.name, href: `/movies?genre=${g.slug}` }))
@@ -116,11 +90,12 @@ export default function Navbar({ initialGenres, initialCountries }: NavbarProps 
         { label: "ខ្មែរ", href: "/movies?country=kh" },
       ];
 
-  const navItems = [
-    ...staticNavItems,
-    { label: "ប្រភេទរឿង", href: "/movies", dropdown: genreDropdown },
-    { label: "ប្រទេស", href: "/movies", dropdown: countryDropdown },
+  const navItems: { label: string; href: string; dropdown?: { label: string; href: string }[] }[] = [
+    { label: "ទំព័រដើម", href: "/" },
+    { label: "ភាពយន្ត", href: "/movies", dropdown: genreDropdown },
+    { label: "ស៊េរី", href: "/series", dropdown: countryDropdown },
   ];
+
 
   const openUserMenu  = () => { if (userMenuTimer.current) clearTimeout(userMenuTimer.current); setUserMenuOpen(true); };
   const closeUserMenu = () => { userMenuTimer.current = setTimeout(() => setUserMenuOpen(false), 150); };
@@ -164,12 +139,13 @@ export default function Navbar({ initialGenres, initialCountries }: NavbarProps 
                 onMouseEnter={() => item.dropdown && openDD(item.label)}
                 onMouseLeave={closeDD}
               >
+
                 <a
                   href={item.href}
                   className="flex items-center gap-1 px-3 py-8 text-lg  space-x-2.5 space-y-1.5 whitespace-nowrap transition-colors rounded"
                
                   style={{ color: active ? "#e8c84a" : "#d1d1d1",fontFamily: "'Kantumruy Pro', 'Noto Sans Khmer', sans-serif",
-  fontWeight: 900,}}
+                   fontWeight: 900,}}
                   onMouseEnter={(e) => {
                     if (!active) e.currentTarget.style.color = "#fff";
                   }}
@@ -177,6 +153,7 @@ export default function Navbar({ initialGenres, initialCountries }: NavbarProps 
                     if (!active) e.currentTarget.style.color = "#d1d1d1";
                   }}
                 >
+                  
                   {item.label}
                   {item.dropdown && (
                     <svg

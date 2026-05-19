@@ -61,7 +61,7 @@ export default function SeriesClient({
   const [hasMore,     setHasMore]     = useState(initialSeries.length === 24);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [genreList,   setGenreList]   = useState<ApiGenre[]>(initialGenreList);
+  const [genreList]   = useState<ApiGenre[]>(initialGenreList);
 
   const loaderRef = useRef<HTMLDivElement>(null);
   const hasInitialData = useRef(initialSeries.length > 0);

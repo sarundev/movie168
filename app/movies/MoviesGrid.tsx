@@ -115,7 +115,7 @@ export default function MoviesGrid({
     return () => {
       cancelled = true;
     };
-  }, [buildParams]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [buildParams]);
 
   // Infinite scroll
   const loadMore = useCallback(async () => {

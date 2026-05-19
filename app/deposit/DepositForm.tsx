@@ -71,13 +71,7 @@ function PrimaryBtn({ onClick, disabled, loading, children }: {
   );
 }
 
-export default function DepositForm({
-  initialBalance = null,
-  initialCredits = null,
-}: {
-  initialBalance?: number | null;
-  initialCredits?: number | null;
-}) {
+export default function DepositForm() {
   const [topUpType, setTopUpType] = useState<TopUpType>("balance");
   const [pack,      setPack]      = useState("5");
   const [loading,   setLoading]   = useState(false);

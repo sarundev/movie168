@@ -4,7 +4,7 @@ import NavbarWrapper from "./components/NavbarWrapper";
 import HeroSlider from "./components/HeroSlider";
 import MovieRow from "./components/MovieRow";
 import Footer from "./components/Footer";
-import { fetchTrendingMovies, fetchMovies, fetchSliderMovies, fetchMovieFilters, type ApiMovie, type ApiGenre } from "./lib/api";
+import { fetchTrendingMovies, fetchMovies, fetchSliderMovies, fetchMovieFilters, type ApiMovie } from "./lib/api";
 
 const MAX_GENRE_ROWS = 5;
 

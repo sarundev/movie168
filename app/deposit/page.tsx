@@ -1,24 +1,9 @@
-import { getServerUser } from "../lib/server-auth";
-import { fetchCreditBalance } from "../lib/api";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import Link from "next/link";
 import DepositForm from "./DepositForm";
 
 export default async function DepositPage() {
-  const user = await getServerUser();
-
-  let initialBalance: number | null = null;
-  let initialCredits: number | null = null;
-
-  if (user?.token) {
-    try {
-      const bal = await fetchCreditBalance(user.token);
-      initialBalance = bal.balance;
-      initialCredits = bal.credits;
-    } catch {}
-  }
-
   return (
     <div className="min-h-screen" style={{ background: "#0d0d12" }}>
       <Navbar />
@@ -33,10 +18,7 @@ export default async function DepositPage() {
         <p className="text-sm mt-1" style={{ color: "#555" }}>ដាក់ប្រាក់ចូល Balance ឬទិញ Credits</p>
       </div>
 
-      <DepositForm
-        initialBalance={initialBalance}
-        initialCredits={initialCredits}
-      />
+      <DepositForm />
 
       <Footer />
     </div>
