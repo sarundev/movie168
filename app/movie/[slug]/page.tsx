@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cache, Suspense } from "react";
+import { notFound } from "next/navigation";
 
 import Link from "next/link";
 import { fetchMovieDetail, fetchComments, canWatchMovie, getMovieRating, type ApiMovie } from "../../lib/api";
@@ -61,9 +62,7 @@ export default async function MovieDetailPage({
   return (
     <div className="min-h-screen md:pt-4 pt-20" style={{ background: "#111116" }}>
       <Navbar />
-      <Suspense fallback={<div className="flex items-center justify-center py-32"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>}>
-        <MovieDetailShell slug={slug} />
-      </Suspense>
+      <MovieDetailShell slug={slug} />
       <div className="gold-divider mx-4 sm:mx-6 lg:mx-12 mb-2" />
       <Footer />
     </div>
@@ -80,10 +79,10 @@ async function MovieDetailShell({ slug }: { slug: string }) {
       ? await fetchMovieDetail(slug, token)
       : await getMovieMeta(slug);
   } catch {
-    return null;
+    notFound();
   }
 
-  if (!movie) return null;
+  if (!movie) notFound();
 
   // Hero data
   const poster = movie.backdrop_url ?? movie.poster_url ?? movie.thumbnail_url;
@@ -319,12 +318,14 @@ async function MovieDetailShell({ slug }: { slug: string }) {
               token={token}
             />
 
-            <AsyncComments
-              movieId={movie.id}
-              slug={slug}
-              token={token}
-              userName={user?.name ?? ""}
-            />
+            <Suspense fallback={null}>
+              <AsyncComments
+                movieId={movie.id}
+                slug={slug}
+                token={token}
+                userName={user?.name ?? ""}
+              />
+            </Suspense>
 
             {related.length > 0 && (
               <div className="rounded-xl p-4" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>

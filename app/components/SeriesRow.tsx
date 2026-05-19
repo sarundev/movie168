@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getMovieRating, type ApiMovie } from "../lib/api";
 
 interface SeriesRowProps {
@@ -58,11 +59,12 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 }}
               >
                 {image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={image}
                     alt={s.title}
-                    className="absolute inset-0 w-full h-full object-cover object-top"
+                    fill
+                    sizes="120px"
+                    className="object-cover object-top"
                     loading="lazy"
                   />
                 )}
@@ -171,11 +173,12 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 }}
               >
                 {image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
+                  <Image
                     src={image}
                     alt={s.title}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    fill
+                    sizes="230px"
+                    className="object-cover"
                     loading="lazy"
                   />
                 )}

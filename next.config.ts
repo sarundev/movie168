@@ -3,8 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
-  // Compress responses
   compress: true,
+
+  experimental: {
+    optimizePackageImports: ["next/image"],
+  },
 
   images: {
     remotePatterns: [

@@ -8,6 +8,21 @@ import { fetchTrendingMovies, fetchMovies, fetchSliderMovies, fetchMovieFilters,
 
 const MAX_GENRE_ROWS = 5;
 
+async function HeroSliderSection() {
+  const sliders = await fetchSliderMovies().catch(() => []);
+  const firstHeroImage = sliders[0]?.backdrop_url ?? sliders[0]?.poster_url ?? sliders[0]?.thumbnail_url;
+  return (
+    <>
+      {firstHeroImage && (() => {
+        const enc = encodeURIComponent(firstHeroImage);
+        const srcSet = [640, 828, 1080, 1920].map(w => `/_next/image?url=${enc}&w=${w}&q=85 ${w}w`).join(", ");
+        return <link rel="preload" as="image" imageSrcSet={srcSet} imageSizes="100vw" />;
+      })()}
+      <HeroSlider initialMovies={sliders} />
+    </>
+  );
+}
+
 async function HomeContent() {
   const [trendingResult, newRelsResult, topResult, filtersResult] =
     await Promise.allSettled([
@@ -93,24 +108,18 @@ async function HomeContent() {
   );
 }
 
-export default async function Home() {
-  const sliders  = await fetchSliderMovies().catch(() => []);
-  const firstHeroImage = sliders[0]?.backdrop_url ?? sliders[0]?.poster_url ?? sliders[0]?.thumbnail_url;
-
+export default function Home() {
   return (
     <div className="min-h-screen" style={{ background: "#0d0d12" }}>
-      {firstHeroImage && (() => {
-        const enc = encodeURIComponent(firstHeroImage);
-        const srcSet = [640, 828, 1080, 1920].map(w => `/_next/image?url=${enc}&w=${w}&q=85 ${w}w`).join(", ");
-        return <link rel="preload" as="image" imageSrcSet={srcSet} imageSizes="100vw" />;
-      })()}
       <NavbarWrapper />
 
       <div className="relative pt-16 md:pt-24">
-        <HeroSlider initialMovies={sliders} />
+        <Suspense fallback={<div style={{ height: "clamp(300px, 42vw, 600px)", background: "#0d0d12" }} />}>
+          <HeroSliderSection />
+        </Suspense>
       </div>
 
-      <Suspense fallback={<div className="flex justify-center py-20"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c9a835" strokeWidth="2.5" className="animate-spin"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg></div>}>
+      <Suspense fallback={null}>
         <HomeContent />
       </Suspense>
 
