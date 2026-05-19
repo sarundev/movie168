@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import NavbarWrapper from "./components/NavbarWrapper";
 import HeroSlider from "./components/HeroSlider";
@@ -30,16 +29,6 @@ async function GenreRows({ genres }: { genres: ApiGenre[] }) {
         <div key={row.slug} style={{ background: "rgba(13,13,18,0.95)", borderBottom: "1px solid rgba(201,168,53,0.1)" }}>
           <MovieRow title={row.name} movies={row.movies} viewAllHref={`/movies?genre=${row.slug}`} />
         </div>
-      ))}
-    </>
-  );
-}
-
-function GenreRowsSkeleton() {
-  return (
-    <>
-      {[1, 2, 3].map(i => (
-        <div key={i} className="animate-pulse rounded-xl mx-1" style={{ height: "260px", background: "rgba(255,255,255,0.03)" }} />
       ))}
     </>
   );
@@ -126,9 +115,7 @@ export default async function Home() {
 
         {/* Genre rows stream in without blocking the above content */}
         {selectedGenres.length > 0 && (
-          <Suspense fallback={<GenreRowsSkeleton />}>
-            <GenreRows genres={selectedGenres} />
-          </Suspense>
+          <GenreRows genres={selectedGenres} />
         )}
 
         {/* Top Rated */}

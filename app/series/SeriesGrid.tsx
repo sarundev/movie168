@@ -36,18 +36,6 @@ function toDisplay(m: ApiMovie): DisplaySeries {
   };
 }
 
-function CardSkeleton() {
-  return (
-    <div>
-      <div className="rounded-xl animate-pulse" style={{ aspectRatio:"2/3", background:"rgba(255,255,255,0.06)" }} />
-      <div className="mt-2 space-y-1">
-        <div className="h-3 rounded animate-pulse" style={{ background:"rgba(255,255,255,0.06)", width:"80%" }} />
-        <div className="h-2.5 rounded animate-pulse" style={{ background:"rgba(255,255,255,0.04)", width:"50%" }} />
-      </div>
-    </div>
-  );
-}
-
 export default function SeriesGrid({
   initialSeries = [],
   initialGenre = "",
@@ -134,14 +122,10 @@ export default function SeriesGrid({
   return (
     <>
       <p className="text-sm mb-3" style={{ color:"#666" }}>
-        {loading ? "Loading…" : `${series.length}${hasMore ? "+" : ""} series`}
+        {`${series.length}${hasMore ? "+" : ""} series`}
       </p>
 
-      {loading ? (
-        <div className="grid gap-4 grid-cols-3 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8">
-          {Array.from({ length: 24 }).map((_, i) => <CardSkeleton key={i} />)}
-        </div>
-      ) : series.length === 0 ? (
+      {loading ? null : series.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
           <div className="text-5xl">📺</div>
           <p className="text-lg font-semibold" style={{ color:"#555" }}>No series found</p>

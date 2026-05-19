@@ -182,18 +182,6 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
-// ─── Skeleton ─────────────────────────────────────────────────────────────────
-
-function SkeletonCards() {
-  return (
-    <div className="flex gap-4">
-      {[1, 2, 3, 4].map(i => (
-        <div key={i} className="shrink-0 rounded-xl animate-pulse" style={{ width: 110, aspectRatio: "2/3", background: "rgba(255,255,255,0.05)" }} />
-      ))}
-    </div>
-  );
-}
-
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ProfileContent({
@@ -367,16 +355,7 @@ export default function ProfileContent({
             <div className="mb-5 -mx-6" style={{ height: 1, background: "rgba(255,255,255,0.05)" }} />
 
             {/* Stats row */}
-            {loadingData ? (
-              <div className="flex justify-around">
-                {[1, 2, 3, 4].map(i => (
-                  <div key={i} className="flex flex-col items-center gap-2">
-                    <div className="h-6 w-12 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.07)" }} />
-                    <div className="h-3 w-16 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.04)" }} />
-                  </div>
-                ))}
-              </div>
-            ) : (
+            {loadingData ? null : (
               <div className="flex justify-around">
                 <StatPill value={totalWatched} label="រឿងបានមើល" />
                 <div style={{ width: 1, background: "rgba(255,255,255,0.06)", borderRadius: 1 }} />
@@ -507,7 +486,7 @@ export default function ProfileContent({
         {/* ── Watch History tab ── */}
         {activeTab === "history" && (
           <div>
-            {loadingData ? <SkeletonCards /> : history.length === 0 ? (
+            {history.length === 0 ? (
               <EmptyState message="មិនទាន់មានប្រវត្តិ" />
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-3" style={{ scrollbarWidth: "none" }}>
@@ -529,7 +508,7 @@ export default function ProfileContent({
         {/* ── Purchases tab ── */}
         {activeTab === "saved" && (
           <div>
-            {loadingData ? <SkeletonCards /> : purchases.length === 0 ? (
+            {purchases.length === 0 ? (
               <EmptyState message="មិនទាន់មានការទិញ" />
             ) : (
               <div className="flex gap-4 overflow-x-auto pb-3" style={{ scrollbarWidth: "none" }}>

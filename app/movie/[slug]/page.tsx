@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { cache, Suspense } from "react";
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { fetchMovieDetail, fetchComments, fetchMe, canWatchMovie, getMovieRating, type ApiMovie } from "../../lib/api";
@@ -51,41 +51,6 @@ export async function generateMetadata({
   }
 }
 
-function PageFallback() {
-  return (
-    <>
-      <div style={{ background: "#000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-        <div className="relative w-full mx-auto" style={{ maxWidth: "1350px", aspectRatio: "16/9" }}>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-16 h-16 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }} />
-          </div>
-        </div>
-      </div>
-      <div className="px-3 sm:px-5 lg:px-10 pb-16" style={{ marginTop: "-2px" }}>
-        <div className="flex flex-col lg:flex-row gap-6 max-w-screen-xl mx-auto">
-          <div className="flex-1 min-w-0 space-y-4">
-            <div className="rounded-xl p-4" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <div className="flex gap-4">
-                <div style={{ width: "90px", aspectRatio: "2/3", background: "#2a2a35", borderRadius: "8px" }} />
-                <div className="flex-1 space-y-3">
-                  <div className="h-6 w-3/4" style={{ background: "#2a2a35", borderRadius: "4px" }} />
-                  <div className="h-4 w-1/2" style={{ background: "#2a2a35", borderRadius: "4px" }} />
-                  <div className="h-4 w-1/3" style={{ background: "#2a2a35", borderRadius: "4px" }} />
-                </div>
-              </div>
-            </div>
-            <div className="rounded-xl p-4" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)", height: "100px" }} />
-            <div className="rounded-xl p-4" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)", height: "80px" }} />
-          </div>
-          <div className="w-full lg:w-72 shrink-0">
-            <div className="rounded-xl overflow-hidden" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)", height: "400px" }} />
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 export default async function MovieDetailPage({
   params,
 }: {
@@ -96,9 +61,7 @@ export default async function MovieDetailPage({
   return (
     <div className="min-h-screen md:pt-4 pt-20" style={{ background: "#111116" }}>
       <Navbar />
-      <Suspense fallback={<PageFallback />}>
-        <MovieDetailShell slug={slug} />
-      </Suspense>
+      <MovieDetailShell slug={slug} />
       <div className="gold-divider mx-4 sm:mx-6 lg:mx-12 mb-2" />
       <Footer />
     </div>
@@ -115,10 +78,10 @@ async function MovieDetailShell({ slug }: { slug: string }) {
       ? await fetchMovieDetail(slug, token)
       : await getMovieMeta(slug);
   } catch {
-    return <PageFallback />;
+    return null;
   }
 
-  if (!movie) return <PageFallback />;
+  if (!movie) return null;
 
   // Hero data
   const poster = movie.backdrop_url ?? movie.poster_url ?? movie.thumbnail_url;
@@ -354,14 +317,12 @@ async function MovieDetailShell({ slug }: { slug: string }) {
               token={token}
             />
 
-            <Suspense fallback={<CommentsSkeleton />}>
-              <AsyncComments
-                movieId={movie.id}
-                slug={slug}
-                token={token}
-                userName={user?.name ?? ""}
-              />
-            </Suspense>
+            <AsyncComments
+              movieId={movie.id}
+              slug={slug}
+              token={token}
+              userName={user?.name ?? ""}
+            />
 
             {related.length > 0 && (
               <div className="rounded-xl p-4" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -434,14 +395,4 @@ async function AsyncComments({ movieId, slug, token, userName }: { movieId: numb
   );
 }
 
-function CommentsSkeleton() {
-  return (
-    <div className="rounded-xl p-4" style={{ background: "#1c1c22", border: "1px solid rgba(255,255,255,0.07)" }}>
-      <div className="h-6 bg-gray-700 rounded w-32 mb-4 animate-pulse" />
-      <div className="space-y-3">
-        <div className="h-24 bg-gray-700 rounded animate-pulse" />
-        <div className="h-24 bg-gray-700 rounded animate-pulse" />
-      </div>
-    </div>
-  );
-}
+

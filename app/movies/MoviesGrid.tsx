@@ -47,18 +47,6 @@ function toDisplay(m: ApiMovie): DisplayMovie {
   };
 }
 
-function MovieCardSkeleton() {
-  return (
-    <div>
-      <div className="rounded-lg sm:rounded-xl animate-pulse" style={{ aspectRatio: "2/3", background: "rgba(255,255,255,0.06)" }} />
-      <div className="mt-1.5 space-y-1">
-        <div className="h-3 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.06)", width: "80%" }} />
-        <div className="h-2.5 rounded animate-pulse" style={{ background: "rgba(255,255,255,0.04)", width: "50%" }} />
-      </div>
-    </div>
-  );
-}
-
 export default function MoviesGrid({
   initialMovies = [],
   initialGenre = "",
@@ -168,16 +156,10 @@ export default function MoviesGrid({
   return (
     <>
       <p className="text-sm mb-3" style={{ color: "#666" }}>
-        {loading ? "Loading…" : `${displayed.length}${hasMore ? "+" : ""} titles`}
+        {`${displayed.length}${hasMore ? "+" : ""} titles`}
       </p>
 
-      {loading ? (
-        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 gap-2 sm:gap-4">
-          {Array.from({ length: 24 }).map((_, i) => (
-            <MovieCardSkeleton key={i} />
-          ))}
-        </div>
-      ) : displayed.length === 0 ? (
+      {loading ? null : displayed.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
           <div className="text-5xl">🎬</div>
           <p className="text-lg font-semibold" style={{ color: "#555" }}>
