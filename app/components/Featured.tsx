@@ -1,9 +1,4 @@
-"use client";
-
-import { useState } from "react";
 import { getMovieRating, type ApiMovie } from "../lib/api";
-
-const CARDS_PER_PAGE = 3;
 
 const qualityStyle: Record<string, { bg: string }> = {
   "4K": { bg: "#1d4ed8" },
@@ -19,17 +14,13 @@ const badgeStyle: Record<string, string> = {
 };
 
 export default function Featured({ movies }: { movies: ApiMovie[] }) {
-  const [page, setPage] = useState(0);
-  const totalPages = Math.ceil(movies.length / CARDS_PER_PAGE);
-  const visible = movies.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE);
-
   if (movies.length === 0) return null;
 
   return (
     <section className="px-4 sm:px-6 lg:px-12 pt-20 pb-8">
       {/* 3-column featured grid */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {visible.map((movie, idx) => {
+        {movies.map((movie, idx) => {
           const quality = movie.quality ?? "HD";
           const qs = qualityStyle[quality] ?? qualityStyle["HD"];
           const image = movie.poster_url ?? movie.thumbnail_url ?? movie.backdrop_url;
@@ -172,25 +163,6 @@ export default function Featured({ movies }: { movies: ApiMovie[] }) {
           );
         })}
       </div>
-
-      {/* Pagination dots */}
-      {totalPages > 1 && (
-        <div className="flex justify-center gap-2 mt-5">
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => setPage(i)}
-              className="rounded-full transition-all duration-300"
-              style={{
-                width: i === page ? "28px" : "8px",
-                height: "7px",
-                background: i === page ? "#c9a835" : "rgba(255,255,255,0.18)",
-              }}
-              aria-label={`Page ${i + 1}`}
-            />
-          ))}
-        </div>
-      )}
     </section>
   );
 }

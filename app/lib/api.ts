@@ -59,6 +59,7 @@ export interface ApiMovie {
 
   genres?: { id: number; name: string; slug?: string }[];
   casts?: { id: number; name: string; role?: string; profile_url?: string }[];
+  trailer_url?: string;
   trailers?: { id: number; url: string; label?: string }[];
   sources?: ApiMovieSource[];
   subtitles?: unknown[];
@@ -216,7 +217,14 @@ export class ApiError extends Error {
 
 // In-memory cache for client-side requests (server-side uses Next.js Data Cache)
 const _cache = new Map<string, { data: unknown; ts: number }>();
-const CACHE_TTL = 60_000; // 60 seconds — short enough to show fresh posters after navigation
+// Filter/genre data changes rarely — cache for 10 min. Movie lists cache for 2 min.
+const CACHE_TTL_LONG  = 600_000; // 10 min  — filters, genres, countries
+const CACHE_TTL_SHORT = 120_000; // 2 min   — movie lists, detail pages
+
+function getCacheTtl(url: string): number {
+  if (url.includes("/filters") || url.includes("/genres")) return CACHE_TTL_LONG;
+  return CACHE_TTL_SHORT;
+}
 
 async function req<T>(
   url: string,
@@ -229,7 +237,7 @@ async function req<T>(
 
   if (cacheKey) {
     const hit = _cache.get(cacheKey);
-    if (hit && Date.now() - hit.ts < CACHE_TTL) return hit.data as T;
+    if (hit && Date.now() - hit.ts < getCacheTtl(url)) return hit.data as T;
   }
 
   const headers: Record<string, string> = {
@@ -239,10 +247,15 @@ async function req<T>(
   };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  // Authenticated server-side requests: never cache (user-specific, may change after purchase/login).
-  // Public server-side GETs: Next.js Data Cache, revalidate every 60 s for fresh posters/data.
+  // Authenticated server-side requests: never cache (user-specific).
+  // Public server-side GETs: Next.js Data Cache with tiered TTLs.
+  const nextRevalidate = url.includes("/sliders") || url.includes("/filters") || url.includes("/genres")
+    ? 3600   // 1 hour — rarely-changing catalogue data
+    : url.includes("/trending") || url.includes("/featured")
+    ? 300    // 5 min — popularity scores update more often
+    : 600;   // 10 min — standard movie lists
   const nextOptions: RequestInit = isGet && !isClient
-    ? (token ? { cache: "no-store" } : { next: { revalidate: 60 } })
+    ? (token ? { cache: "no-store" } : { next: { revalidate: nextRevalidate } })
     : {};
 
   const res = await fetch(url, { ...options, headers, ...nextOptions });

@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
-import Navbar from "../../components/Navbar";
-import Footer from "../../components/Footer";
 import { buildPlaybackUrl } from "../../lib/player";
 import { fetchEpisodePlayerAction } from "../../actions/tv-show-actions";
 import type { ApiTvShow, ApiSeason, ApiEpisode } from "../../lib/api";
@@ -18,7 +17,7 @@ function formatRuntime(min: number | null | undefined) {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 }
 
-export default function TvShowClient({
+export default function EpisodePlayer({
   show,
   slug,
   user,
@@ -83,9 +82,7 @@ export default function TvShowClient({
   const episodes = selectedSeason?.episodes ?? [];
 
   return (
-    <div className="min-h-screen" style={{ background: "#111116" }}>
-      <Navbar />
-
+    <>
       {/* ── Player / Backdrop ── */}
       <div style={{ background: "#000", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div className="relative w-full mx-auto" style={{ maxWidth: "1350px", aspectRatio: "16/9" }}>
@@ -121,11 +118,11 @@ export default function TvShowClient({
                   <>
                     <p className="text-sm font-semibold" style={{ color: "#ef4444" }}>{playerError}</p>
                     {!user && (
-                      <a href={`/login?redirect=/tv-shows/${slug}`}
+                      <Link href={`/login?redirect=/tv-shows/${slug}`}
                         className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
                         style={{ background: "linear-gradient(135deg,#c9a835,#8a6e1a)", color: "#0d0d12" }}>
                         ចូលគណនី
-                      </a>
+                      </Link>
                     )}
                   </>
                 ) : selectedEpisode ? (
@@ -140,11 +137,11 @@ export default function TvShowClient({
                       {selectedEpisode.title ?? `Episode ${selectedEpisode.episode_number}`}
                     </p>
                     {!user ? (
-                      <a href={`/login?redirect=/tv-shows/${slug}`}
+                      <Link href={`/login?redirect=/tv-shows/${slug}`}
                         className="px-6 py-2.5 rounded-xl text-sm font-bold transition-all hover:opacity-90"
                         style={{ background: "linear-gradient(135deg,#c9a835,#8a6e1a)", color: "#0d0d12" }}>
                         ចូលគណនី
-                      </a>
+                      </Link>
                     ) : (
                       <button
                         onClick={() => selectedSeason && handleSelectEpisode(selectedEpisode, selectedSeason)}
@@ -399,9 +396,6 @@ export default function TvShowClient({
 
         </div>
       </div>
-
-      <div className="mx-4 sm:mx-6 lg:mx-12 mb-2" style={{ height: 1, background: "rgba(201,168,53,0.12)" }} />
-      <Footer />
-    </div>
+    </>
   );
 }

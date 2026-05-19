@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  // Compress responses
+  compress: true,
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },
@@ -13,7 +16,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.cdn.digitaloceanspaces.com" },
     ],
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 86400, // 24h for optimized images
+    minimumCacheTTL: 86400,
+    deviceSizes: [640, 828, 1080, 1920],
+    imageSizes: [64, 96, 128, 160, 256],
   },
 
   async headers() {

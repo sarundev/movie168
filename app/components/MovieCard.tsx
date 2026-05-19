@@ -1,5 +1,4 @@
-"use client";
-
+import Image from "next/image";
 import { getMovieRating, type ApiMovie } from "../lib/api";
 
 const qualityStyle: Record<string, { bg: string }> = {
@@ -26,41 +25,27 @@ export default function MovieCard({ movie }: { movie: ApiMovie }) {
   const price          = movie.price;
 
   return (
-    <div
-      className="group shrink-0 block"
-      style={{ width: "160px" }}
-    >
+    <div className="group shrink-0 block" style={{ width: "160px" }}>
       {/* ── Poster frame (2:3 ratio) ── */}
       <div
-        className="relative overflow-hidden"
+        className="relative overflow-hidden movie-card-poster"
         style={{
           width: "160px",
           height: "240px",
           borderRadius: "10px",
           background: gradient,
-          boxShadow: "0 6px 22px rgba(0,0,0,0.65)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          transition: "transform 0.3s ease, box-shadow 0.3s ease",
-        }}
-        onMouseEnter={(e) => {
-          const el = e.currentTarget as HTMLDivElement;
-          el.style.transform = "scale(1.05) translateY(-3px)";
-          el.style.boxShadow = "0 14px 40px rgba(0,0,0,0.75), 0 0 0 1.5px rgba(201,168,53,0.45)";
-        }}
-        onMouseLeave={(e) => {
-          const el = e.currentTarget as HTMLDivElement;
-          el.style.transform = "scale(1) translateY(0)";
-          el.style.boxShadow = "0 6px 22px rgba(0,0,0,0.65)";
         }}
       >
-        {/* Poster image */}
+        {/* Poster image — Next.js Image for automatic WebP + proper sizing */}
         {image && (
-          <img
+          <Image
             src={image}
             alt={movie.title}
-            className="absolute inset-0 w-full h-full object-cover"
+            fill
+            sizes="160px"
+            className="object-cover"
             loading="lazy"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+            quality={75}
           />
         )}
 
@@ -97,9 +82,8 @@ export default function MovieCard({ movie }: { movie: ApiMovie }) {
           {quality}
         </span>
 
-        {/* ── BOTTOM CONTENT (always visible) ── */}
+        {/* ── BOTTOM CONTENT ── */}
         <div className="absolute bottom-0 inset-x-0 px-2.5 pb-2.5 flex flex-col gap-1.5">
-          {/* Payment method pills */}
           {paymentMethods.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {paymentMethods.map((m) => (
@@ -119,7 +103,6 @@ export default function MovieCard({ movie }: { movie: ApiMovie }) {
             </div>
           )}
 
-          {/* Title */}
           <h3
             className="text-white font-bold leading-tight"
             style={{
@@ -134,7 +117,6 @@ export default function MovieCard({ movie }: { movie: ApiMovie }) {
             {movie.title}
           </h3>
 
-          {/* Year + Rating */}
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
               {year || "—"}

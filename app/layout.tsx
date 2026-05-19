@@ -12,7 +12,7 @@ const geistSans = Geist({
 
 const kantumruy = Kantumruy_Pro({
   subsets: ["khmer"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "700"],
   variable: "--font-khmer",
   display: "swap",
 });
@@ -30,9 +30,12 @@ export default function RootLayout({
   return (
     <html lang="km" className={`${geistSans.variable} ${kantumruy.variable} h-full`}>
       <head>
-        <link rel="preconnect" href="https://image.tmdb.org" />
-        <link rel="preconnect" href="https://streaming-backend-hldchiyj.on-forge.com" />
+        <link rel="preconnect" href="https://streaming-backend-hldchiyj.on-forge.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://image.tmdb.org" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://cdn-mdia.sgp1.digitaloceanspaces.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://streaming-backend-hldchiyj.on-forge.com" />
         <link rel="dns-prefetch" href="https://image.tmdb.org" />
+        <link rel="dns-prefetch" href="https://cdn-mdia.sgp1.digitaloceanspaces.com" />
       </head>
       <body className="bg-[#09090b] text-white min-h-full antialiased" suppressHydrationWarning>
         {/* Extra bottom padding on mobile so content clears the nav bar */}

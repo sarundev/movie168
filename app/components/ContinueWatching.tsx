@@ -1,5 +1,3 @@
-"use client";
-
 import type { ApiMovie } from "../lib/api";
 
 export default function ContinueWatching({ movies }: { movies: ApiMovie[] }) {

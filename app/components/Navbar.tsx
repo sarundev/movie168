@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "../context/AuthContext";
 import { fetchMovieFilters, type ApiGenre } from "../lib/api";
 
@@ -44,8 +45,14 @@ const staticNavItems = [
 
 
 
-export default function Navbar() {
+interface NavbarProps {
+  initialGenres?: ApiGenre[];
+  initialCountries?: { label: string; value: string }[];
+}
+
+export default function Navbar({ initialGenres, initialCountries }: NavbarProps = {}) {
   const pathname = usePathname();
+  const router   = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -53,17 +60,39 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const dropdownTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userMenuTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [genres, setGenres] = useState<ApiGenre[]>([]);
-  const [countries, setCountries] = useState<{ label: string; value: string }[]>([]);
+  const [genres, setGenres] = useState<ApiGenre[]>(initialGenres ?? []);
+  const [countries, setCountries] = useState<{ label: string; value: string }[]>(initialCountries ?? []);
 
   useEffect(() => {
+    // Skip client fetch when the server already provided data
+    if (initialGenres && initialCountries) return;
+
+    const NAV_CACHE_KEY = "nav_filters_v1";
+    const NAV_CACHE_TTL = 10 * 60 * 1000;
+    try {
+      const raw = sessionStorage.getItem(NAV_CACHE_KEY);
+      if (raw) {
+        const { genres: g, countries: c, ts } = JSON.parse(raw);
+        if (Date.now() - ts < NAV_CACHE_TTL) {
+          setGenres(g);
+          setCountries(c);
+          return;
+        }
+      }
+    } catch {}
+
     fetchMovieFilters()
       .then((f) => {
         setGenres(f.genres);
         setCountries(f.countries);
+        try {
+          sessionStorage.setItem(NAV_CACHE_KEY, JSON.stringify({
+            genres: f.genres, countries: f.countries, ts: Date.now(),
+          }));
+        } catch {}
       })
       .catch(() => {});
-  }, []);
+  }, [initialGenres, initialCountries]);
 
   const genreDropdown = genres.length > 0
     ? genres.map((g) => ({ label: g.name, href: `/movies?genre=${g.slug}` }))
@@ -115,14 +144,14 @@ export default function Navbar() {
       <div className="px-4 sm:px-6 lg:px-10 flex items-center h-16 md:h-20 gap-4">
 
         {/* Logo */}
-        <a href="/" className="flex items-center gap-2 shrink-0 mr-2">
+        <Link href="/" className="flex items-center gap-2 shrink-0 mr-2">
           {/* Diamond icon */}
         
           <div className="leading-none">
             <span className="font-black text-lg tracking-wider" style={{ color: "#e8c84a" }}>168</span>
             <span className="font-black text-lg tracking-wider text-green-600 ml-1">KH</span>
           </div>
-        </a>
+        </Link>
 
         {/* Desktop nav links */}
         <div className="hidden lg:flex items-center flex-1 min-w-0 py-24">
@@ -216,7 +245,7 @@ export default function Navbar() {
               className="bg-transparent text-sm text-white placeholder-zinc-500 outline-none px-3 py-1.5 w-44"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && searchQuery.trim()) {
-                  window.location.href = `/movies?q=${encodeURIComponent(searchQuery)}`;
+                  router.push(`/movies?q=${encodeURIComponent(searchQuery)}`);
                 }
               }}
             />
@@ -229,7 +258,7 @@ export default function Navbar() {
               aria-label="Search"
               onClick={() => {
                 if (searchQuery.trim()) {
-                  window.location.href = `/movies?q=${encodeURIComponent(searchQuery)}`;
+                  router.push(`/movies?q=${encodeURIComponent(searchQuery)}`);
                 }
               }}
             >
@@ -290,7 +319,7 @@ export default function Navbar() {
                       <p className="text-xs font-semibold truncate" style={{ color: "#ddd" }}>{user.name}</p>
                       <p className="text-[11px] truncate mt-0.5" style={{ color: "#555" }}>{user.email}</p>
                     </div>
-                    <a href="/profile"
+                    <Link href="/profile"
                       className="flex items-center gap-3 px-4 py-2 text-sm transition-all"
                       style={{ color: "#aaa" }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = "#e8c84a"; e.currentTarget.style.background = "rgba(232,200,74,0.07)"; }}
@@ -299,8 +328,8 @@ export default function Navbar() {
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                       </svg>
                       គណនី
-                    </a>
-                    <a href="/deposit"
+                    </Link>
+                    <Link href="/deposit"
                       className="flex items-center gap-3 px-4 py-2 text-sm transition-all"
                       style={{ color: "#aaa" }}
                       onMouseEnter={(e) => { e.currentTarget.style.color = "#e8c84a"; e.currentTarget.style.background = "rgba(232,200,74,0.07)"; }}
@@ -309,7 +338,7 @@ export default function Navbar() {
                         <path d="M20 12V7H4v13h16v-5"/><path d="M20 12a2 2 0 0 0-4 0 2 2 0 0 0 4 0Z"/>
                       </svg>
                       Top Up
-                    </a>
+                    </Link>
                     <div style={{ borderTop: "1px solid #222", marginTop: "4px", paddingTop: "4px" }}>
                       <button
                         onClick={logout}
@@ -381,7 +410,7 @@ export default function Navbar() {
               className="bg-transparent text-sm text-white placeholder-zinc-500 outline-none px-3 py-2 flex-1"
               onKeyDown={(e) => {
                 if (e.key === "Enter" && searchQuery.trim()) {
-                  window.location.href = `/movies?q=${encodeURIComponent(searchQuery)}`;
+                  router.push(`/movies?q=${encodeURIComponent(searchQuery)}`);
                 }
               }}
             />
@@ -419,12 +448,12 @@ export default function Navbar() {
                     <p className="text-xs truncate" style={{ color: "#555" }}>{user.email}</p>
                   </div>
                 </div>
-                <a href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded text-sm" style={{ color: "#aaa" }}>
+                <Link href="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded text-sm" style={{ color: "#aaa" }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                   </svg>
                   គណនី
-                </a>
+                </Link>
                 <button
                   onClick={logout}
                   disabled={authLoading}

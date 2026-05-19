@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { fetchSliderMovies, getMovieRating, type ApiMovie } from "../lib/api";
+import Image from "next/image";
+import Link from "next/link";
+import { getMovieRating, type ApiMovie } from "../lib/api";
 
 export type { ApiMovie };
 
@@ -26,19 +28,9 @@ function toSlide(m: ApiMovie) {
 type Slide = ReturnType<typeof toSlide>;
 
 export default function HeroSlider({ initialMovies = [] }: { initialMovies?: ApiMovie[] }) {
-  const [slides,  setSlides]  = useState<Slide[]>(() => initialMovies.map(toSlide));
-  const [loading, setLoading] = useState(initialMovies.length === 0);
+  const [slides]  = useState<Slide[]>(() => initialMovies.map(toSlide));
   const [current, setCurrent] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  useEffect(() => {
-    if (initialMovies.length > 0) return;
-    fetchSliderMovies()
-      .then(data => { if (data.length) setSlides(data.map(toSlide)); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const total = slides.length;
 
@@ -60,50 +52,52 @@ export default function HeroSlider({ initialMovies = [] }: { initialMovies?: Api
     resetTimer();
   }, [resetTimer]);
 
-  if (loading) {
-    return (
-      <div
-        className="w-full animate-pulse"
-        style={{ height: "clamp(300px, 42vw, 600px)", background: "rgba(255,255,255,0.05)" }}
-      />
-    );
-  }
 
   if (!total) return null;
 
   const slide = slides[current];
+  const nextIdx = (current + 1) % total;
 
   return (
     <section
       className="relative w-full overflow-hidden"
       style={{ height: "clamp(300px, 42vw, 600px)", background: "#0d0d12" }}
     >
-      {/* Slide images — all in DOM, crossfade via opacity */}
-      {slides.map((s, i) => (
-        <div
-          key={s.id}
-          aria-hidden={i !== current}
-          className="absolute inset-0 transition-opacity duration-700 ease-in-out"
-          style={{
-            opacity: i === current ? 1 : 0,
-            backgroundImage: s.image ? `url(${s.image})` : undefined,
-            backgroundSize: "cover",
-            backgroundPosition: "center top",
-            backgroundRepeat: "no-repeat",
-          }}
-        >
-          {/* Gradient: dark on left for text legibility, subtle at bottom */}
+      {/* All slide containers stay in DOM so opacity transitions work smoothly.
+          Images only mount for current + next — avoids loading all upfront. */}
+      {slides.map((s, i) => {
+        const isCurrent  = i === current;
+        const loadImage  = isCurrent || (total > 1 && i === nextIdx);
+        return (
           <div
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: [
-                "linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.1) 65%, transparent 100%)",
-                "linear-gradient(to top,   rgba(0,0,0,0.55) 0%, transparent 35%)",
-              ].join(", "),
-            }}
-          />
-        </div>
-      ))}
+            key={s.id}
+            aria-hidden={!isCurrent}
+            className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+            style={{ opacity: isCurrent ? 1 : 0 }}
+          >
+            {loadImage && s.image && (
+              <Image
+                src={s.image}
+                alt={s.title}
+                fill
+                priority={i === 0}
+                sizes="100vw"
+                className="object-cover object-top"
+                quality={85}
+              />
+            )}
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background: [
+                  "linear-gradient(to right, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.5) 40%, rgba(0,0,0,0.1) 65%, transparent 100%)",
+                  "linear-gradient(to top,   rgba(0,0,0,0.55) 0%, transparent 35%)",
+                ].join(", "),
+              }}
+            />
+          </div>
+        );
+      })}
 
       {/* Text content */}
       <div
@@ -139,7 +133,7 @@ export default function HeroSlider({ initialMovies = [] }: { initialMovies?: Api
             </p>
           )}
 
-          <a
+          <Link
             href={`/movie/${slide.slug}`}
             className="inline-flex items-center gap-2 font-bold text-white rounded-full transition-all duration-200 hover:brightness-110 active:scale-95"
             style={{
@@ -154,7 +148,7 @@ export default function HeroSlider({ initialMovies = [] }: { initialMovies?: Api
               <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
             </svg>
             មើលឥឡូវ
-          </a>
+          </Link>
         </div>
       </div>
 

@@ -1,7 +1,4 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import { fetchMovieFilters, type ApiGenre } from "../lib/api";
+import type { ApiGenre } from "../lib/api";
 
 const GENRE_META: Record<string, { gradient: string; icon: string }> = {
   action:      { gradient: "linear-gradient(135deg,#7f1d1d,#b45309)", icon: "⚡" },
@@ -41,27 +38,8 @@ function genreMeta(genre: ApiGenre, idx: number) {
   };
 }
 
-function GenreGridSkeleton() {
-  return (
-    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-      {Array.from({ length: 12 }).map((_, i) => (
-        <div key={i} className="rounded-xl animate-pulse"
-          style={{ aspectRatio: "4/3", background: "rgba(255,255,255,0.06)" }} />
-      ))}
-    </div>
-  );
-}
-
-export default function GenreGrid() {
-  const [genres, setGenres] = useState<ApiGenre[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchMovieFilters()
-      .then((f) => setGenres(f.genres))
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+export default function GenreGrid({ genres }: { genres: ApiGenre[] }) {
+  if (genres.length === 0) return null;
 
   return (
     <div>
@@ -73,54 +51,42 @@ export default function GenreGrid() {
         </h2>
       </div>
 
-      {loading ? (
-        <GenreGridSkeleton />
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-          {genres.map((genre, idx) => {
-            const meta = genreMeta(genre, idx);
-            return (
-              <a
-                key={genre.id}
-                href={`/movies?genre=${genre.slug}`}
-                className="group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105"
+      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        {genres.map((genre, idx) => {
+          const meta = genreMeta(genre, idx);
+          return (
+            <a
+              key={genre.id}
+              href={`/movies?genre=${genre.slug}`}
+              className="group relative rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:scale-105"
+              style={{
+                aspectRatio: "4/3",
+                background: meta.gradient,
+                border: "1px solid rgba(255,255,255,0.06)",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+              }}
+            >
+              <div
+                className="absolute inset-0 opacity-[0.07] pointer-events-none"
                 style={{
-                  aspectRatio: "4/3",
-                  background: meta.gradient,
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  boxShadow: "0 4px 14px rgba(0,0,0,0.4)",
+                  backgroundImage:
+                    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")",
                 }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                    "0 8px 28px rgba(201,168,53,0.25), 0 0 0 1.5px rgba(201,168,53,0.35)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.boxShadow =
-                    "0 4px 14px rgba(0,0,0,0.4)";
-                }}
-              >
-                <div
-                  className="absolute inset-0 opacity-[0.07] pointer-events-none"
-                  style={{
-                    backgroundImage:
-                      "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)'/%3E%3C/svg%3E\")",
-                  }}
-                />
-                <div className="absolute inset-0 group-hover:opacity-70 transition-opacity"
-                  style={{ background: "rgba(0,0,0,0.35)" }} />
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-2">
-                  <span className="text-2xl">{meta.icon}</span>
-                  <span className="text-white text-sm font-bold text-center leading-tight">
-                    {genre.name}
-                  </span>
-                </div>
-                <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{ border: "1.5px solid rgba(201,168,53,0.5)" }} />
-              </a>
-            );
-          })}
-        </div>
-      )}
+              />
+              <div className="absolute inset-0 group-hover:opacity-70 transition-opacity"
+                style={{ background: "rgba(0,0,0,0.35)" }} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 p-2">
+                <span className="text-2xl">{meta.icon}</span>
+                <span className="text-white text-sm font-bold text-center leading-tight">
+                  {genre.name}
+                </span>
+              </div>
+              <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                style={{ border: "1.5px solid rgba(201,168,53,0.5)" }} />
+            </a>
+          );
+        })}
+      </div>
     </div>
   );
 }

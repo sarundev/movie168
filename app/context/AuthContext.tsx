@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { API } from "../config";
 
 const STORAGE_KEY = "auth_user";
@@ -60,6 +61,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
   const [user,    setUser]    = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState<string | null>(null);
@@ -192,7 +194,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetch("/api/auth/session", { method: "DELETE" });
     setUser(null);
     setLoading(false);
-    window.location.href = "/";
+    router.push("/");
+    router.refresh();
   }, [user]);
 
   return (

@@ -1,6 +1,3 @@
-"use client";
-
-import { useRef, useEffect } from "react";
 import { getMovieRating, type ApiMovie } from "../lib/api";
 
 interface SeriesRowProps {
@@ -13,23 +10,6 @@ const qualityBg: Record<string, string> = { "4K": "#1d4ed8", FHD: "#b45309", HD:
 const badgeBg:   Record<string, string> = { NEW: "#c9a835", HOT: "#e50914", TOP: "#7c3aed" };
 
 export default function SeriesRow({ title, series, viewAllHref = "/series" }: SeriesRowProps) {
-  const desktopRef = useRef<HTMLDivElement>(null);
-  const mobileRef  = useRef<HTMLDivElement>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const paused = useRef(false);
-
-  useEffect(() => {
-    const STEP = 320;
-    const DELAY = 3000;
-    intervalRef.current = setInterval(() => {
-      if (paused.current || !desktopRef.current) return;
-      const el = desktopRef.current;
-      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
-      el.scrollBy({ left: atEnd ? -el.scrollWidth : STEP, behavior: "smooth" });
-    }, DELAY);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, []);
-
   return (
     <div>
       {/* ── Section header ── */}
@@ -53,10 +33,7 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
       </div>
 
       {/* ── Mobile: horizontal scroll (small cards) ── */}
-      <div
-        ref={mobileRef}
-        className="sm:hidden flex gap-3 overflow-x-auto hide-scrollbar pb-3"
-      >
+      <div className="sm:hidden flex gap-3 overflow-x-auto hide-scrollbar pb-3">
         {series.map(s => {
           const quality = s.quality ?? "HD";
           const qColor = qualityBg[quality] ?? "#15803d";
@@ -81,21 +58,19 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 }}
               >
                 {image && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={image}
                     alt={s.title}
                     className="absolute inset-0 w-full h-full object-cover object-top"
                     loading="lazy"
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
-                {/* Vignette */}
                 <div
                   className="absolute inset-0"
                   style={{ background: "linear-gradient(to top,rgba(0,0,0,0.75) 0%,transparent 50%)" }}
                 />
 
-                {/* Badge — top right */}
                 {s.badge && (
                   <span
                     className="absolute top-1.5 right-1.5 text-[8px] font-black px-1.5 py-0.5 rounded tracking-widest"
@@ -105,7 +80,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   </span>
                 )}
 
-                {/* Quality — bottom left */}
                 <span
                   className="absolute bottom-1.5 left-1.5 text-[8px] font-black px-1.5 py-0.5 rounded tracking-wide"
                   style={{ background: qColor, color: "white" }}
@@ -113,7 +87,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   {quality}
                 </span>
 
-                {/* Tap overlay */}
                 <div
                   className="absolute inset-0 flex items-center justify-center opacity-0 group-active:opacity-100 transition-opacity duration-150"
                   style={{ background: "rgba(0,0,0,0.45)" }}
@@ -129,7 +102,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 </div>
               </div>
 
-              {/* Info below */}
               <div className="mt-1.5 px-0.5">
                 <p
                   className="text-[11px] font-semibold line-clamp-2 leading-tight transition-colors group-hover:text-amber-400"
@@ -147,7 +119,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
           );
         })}
 
-        {/* View All card */}
         <a
           href={viewAllHref}
           className="shrink-0 flex flex-col items-center justify-center gap-2 rounded-lg transition-colors"
@@ -173,12 +144,7 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
       </div>
 
       {/* ── Desktop: horizontal scroll (large cards) ── */}
-      <div
-        ref={desktopRef}
-        className="hidden sm:flex gap-4 overflow-x-auto hide-scrollbar scroll-smooth pb-4"
-        onMouseEnter={() => { paused.current = true; }}
-        onMouseLeave={() => { paused.current = false; }}
-      >
+      <div className="hidden sm:flex gap-4 overflow-x-auto hide-scrollbar scroll-smooth pb-4">
         {series.map(s => {
           const quality = s.quality ?? "HD";
           const qColor = qualityBg[quality] ?? "#15803d";
@@ -196,29 +162,21 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
             >
               {/* Poster */}
               <div
-                className="relative rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.04] group-hover:z-10"
+                className="relative rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-[1.04] group-hover:z-10 shadow-[0_4px_16px_rgba(0,0,0,0.55)] group-hover:shadow-[0_8px_32px_rgba(201,168,53,0.3),0_0_0_1.5px_rgba(201,168,53,0.4)]"
                 style={{
                   width: "230px",
                   height: "330px",
                   background: gradient,
                   border: "1px solid rgba(255,255,255,0.06)",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.55)",
-                }}
-                onMouseEnter={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 8px 32px rgba(201,168,53,0.3), 0 0 0 1.5px rgba(201,168,53,0.4)";
-                }}
-                onMouseLeave={e => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 4px 16px rgba(0,0,0,0.55)";
                 }}
               >
                 {image && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={image}
                     alt={s.title}
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
-                    onError={e => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
                 <div
@@ -242,7 +200,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                   {quality === "4K" ? "4K ULTRA HD" : quality === "FHD" ? "FHD 1080P" : "HD 720P"}
                 </span>
 
-                {/* Hover overlay */}
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center gap-3.5 opacity-0 group-hover:opacity-100 transition-all duration-250"
                   style={{ background: "rgba(0,0,0,0.58)" }}
@@ -282,7 +239,6 @@ export default function SeriesRow({ title, series, viewAllHref = "/series" }: Se
                 </div>
               </div>
 
-              {/* Title & meta */}
               <div className="mt-2.5 px-0.5">
                 <p
                   className="text-sm font-semibold leading-snug line-clamp-1 transition-colors group-hover:text-amber-400"

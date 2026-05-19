@@ -1,6 +1,4 @@
-"use client";
-
-import { useRef } from "react";
+import Link from "next/link";
 import type { ApiMovie } from "../lib/api";
 
 const qualityColors: Record<string, string> = {
@@ -15,12 +13,6 @@ interface TopTenRowProps {
 }
 
 export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTenRowProps) {
-  const rowRef = useRef<HTMLDivElement>(null);
-
-  const scroll = (dir: "left" | "right") => {
-    rowRef.current?.scrollBy({ left: dir === "left" ? -900 : 900, behavior: "smooth" });
-  };
-
   return (
     <div>
       {/* Header */}
@@ -34,33 +26,17 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
             {title}
           </h2>
         </div>
-        <div className="flex items-center gap-2.5">
-          <a href="/movies" className="text-xs font-medium mr-1 transition-colors" style={{ color: "#777" }}
-            onMouseEnter={e => (e.currentTarget.style.color = "#c9a835")}
-            onMouseLeave={e => (e.currentTarget.style.color = "#777")}>
-            View All
-          </a>
-          {["left", "right"].map((dir) => (
-            <button
-              key={dir}
-              onClick={() => scroll(dir as "left" | "right")}
-              className="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:opacity-70"
-              style={{ background: "rgba(201,168,53,0.1)", border: "1px solid rgba(201,168,53,0.3)", color: "#c9a835" }}
-              aria-label={dir === "left" ? "Scroll left" : "Scroll right"}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d={dir === "left" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6"} />
-              </svg>
-            </button>
-          ))}
-        </div>
+        <Link
+          href="/movies"
+          className="text-xs font-medium transition-colors hover:text-[#c9a835]"
+          style={{ color: "#777" }}
+        >
+          View All
+        </Link>
       </div>
 
-      {/* Scrollable numbered cards */}
-      <div
-        ref={rowRef}
-        className="flex gap-2 overflow-x-auto hide-scrollbar scroll-smooth pb-4"
-      >
+      {/* Scrollable numbered cards — CSS-only horizontal scroll */}
+      <div className="flex gap-2 overflow-x-auto hide-scrollbar scroll-smooth pb-4">
         {movies.slice(0, 10).map((movie, idx) => {
           const quality = movie.quality ?? "HD";
           const qColor = qualityColors[quality] ?? qualityColors["HD"];
@@ -93,7 +69,7 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
 
               {/* Movie poster — offset right, on top of number */}
               <div
-                className="absolute right-0 top-0 rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-105"
+                className="absolute right-0 top-0 rounded-xl overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:shadow-[0_8px_32px_rgba(201,168,53,0.3)] group-hover:border-[rgba(201,168,53,0.4)]"
                 style={{
                   width: "155px",
                   height: "300px",
@@ -101,14 +77,6 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
                   border: "1px solid rgba(255,255,255,0.06)",
                   boxShadow: "0 4px 20px rgba(0,0,0,0.6)",
                   zIndex: 2,
-                }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 8px 32px rgba(201,168,53,0.3), 0 0 0 1.5px rgba(201,168,53,0.4)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 4px 20px rgba(0,0,0,0.6)";
                 }}
               >
                 {/* Poster image */}
@@ -118,7 +86,6 @@ export default function TopTenRow({ title = "Top 10 This Week", movies }: TopTen
                     alt={movie.title}
                     className="absolute inset-0 w-full h-full object-cover"
                     loading="lazy"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
 

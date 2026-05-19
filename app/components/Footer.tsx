@@ -1,5 +1,3 @@
-"use client";
-
 const columns = [
   {
     title: "Navigation",
@@ -69,21 +67,8 @@ export default function Footer() {
             <a
               key={label}
               href="#"
-              className="w-8 h-8 flex items-center justify-center rounded transition-all"
-              style={{
-                background: "rgba(201,168,53,0.08)",
-                border: "1px solid rgba(201,168,53,0.18)",
-                color: "#888",
-              }}
+              className="footer-social-icon w-8 h-8 flex items-center justify-center rounded transition-all"
               aria-label={label}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "#c9a835";
-                (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(201,168,53,0.5)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLAnchorElement).style.color = "#888";
-                (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(201,168,53,0.18)";
-              }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
                 <path d={path} />

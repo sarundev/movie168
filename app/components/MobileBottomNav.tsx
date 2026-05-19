@@ -48,15 +48,6 @@ export default function MobileBottomNav() {
 
   return (
     <>
-      <style>{`
-        .mnav-tab { transition: color 180ms ease, transform 180ms ease; }
-        .mnav-tab:active { transform: scale(0.92); }
-        .mnav-indicator {
-          width: 20px; height: 3px; border-radius: 9999px;
-          background: #e01010;
-          transition: opacity 180ms ease, width 180ms ease;
-        }
-      `}</style>
 
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 z-50"
@@ -85,7 +76,7 @@ export default function MobileBottomNav() {
               >
                 <div className="mnav-indicator" style={{ marginBottom: "2px", opacity: active ? 1 : 0, width: active ? "20px" : "0px" }} />
                 <div style={{ lineHeight: 0 }}>{tab.icon}</div>
-                <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1, letterSpacing: "0.02em" }}>
+                <span style={{ fontSize: "10px", fontFamily: "var(--font-khmer), 'Khmer', serif", lineHeight: 1.1, letterSpacing: "0.02em" }}>
                   {tab.label}
                 </span>
               </a>
@@ -130,7 +121,7 @@ export default function MobileBottomNav() {
             ) : (
               <div style={{ lineHeight: 0 }}><ProfileIcon /></div>
             )}
-            <span style={{ fontSize: "10px", fontFamily: "'Battambang', 'Khmer', serif", lineHeight: 1.1 }}>
+            <span style={{ fontSize: "10px", fontFamily: "var(--font-khmer), 'Khmer', serif", lineHeight: 1.1 }}>
               គណនី
             </span>
           </a>
