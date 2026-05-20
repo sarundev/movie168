@@ -4,9 +4,6 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useRouter } from "next/navigation";
 import { API } from "../config";
 
-const STORAGE_KEY = "auth_user";
-
-/* Build a stable device name + fingerprint from browser info */
 function getDeviceName(): string {
   if (typeof navigator === "undefined") return "Unknown Device";
   const ua = navigator.userAgent;
@@ -35,7 +32,6 @@ function getDeviceFingerprint(): string {
     screen.height,
     new Date().getTimezoneOffset(),
   ].join("|");
-  /* simple djb2 hash → hex string (no crypto API needed) */
   let h = 5381;
   for (let i = 0; i < raw.length; i++) h = (h * 33) ^ raw.charCodeAt(i);
   return (h >>> 0).toString(16).padStart(8, "0") + "-device-fingerprint";
@@ -55,7 +51,7 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, passwordConfirmation: string) => Promise<void>;
   logout: () => Promise<void>;
-  syncFromCookie: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -63,43 +59,21 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [user,    setUser]    = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState<string | null>(null);
 
-  /* Sync client state from the non-httpOnly auth_user cookie (set by server actions). */
-  const syncFromCookie = useCallback(() => {
+  const refreshUser = useCallback(async () => {
     try {
-      const match = document.cookie.split(";").find(c => c.trim().startsWith("auth_user="));
-      if (!match) return;
-      const raw = decodeURIComponent(match.split("=").slice(1).join("="));
-      const parsed = JSON.parse(raw) as Omit<AuthUser, "token">;
-      // Token is httpOnly — store a sentinel so we know the user is logged in
-      const authUser: AuthUser = { ...parsed, token: "__server__" };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
-      setUser(authUser);
-    } catch {}
+      const res = await fetch("/api/auth/session");
+      const data = await res.json();
+      setUser(data ?? null);
+    } catch {
+      setUser(null);
+    }
   }, []);
 
-  /* restore persisted auth on mount (intentional setState after hydration) */
   useEffect(() => {
-    /* eslint-disable react-hooks/set-state-in-effect */
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        const authUser = JSON.parse(raw) as AuthUser;
-        setUser(authUser);
-        if (authUser.token && authUser.token !== "__server__") {
-          fetch("/api/auth/session", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token: authUser.token, user: authUser }),
-          }).catch(() => {});
-        }
-      } catch {}
-    } else {
-      syncFromCookie();
-    }
-    /* eslint-enable react-hooks/set-state-in-effect */
+    refreshUser().finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const login = useCallback(async (email: string, password: string) => {
@@ -117,20 +91,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.message ?? "ចូលគណនីមិនបានសำរេច");
+      if (!res.ok) throw new Error(data?.message ?? "ចូលគណនីមិនបានសំរេច");
+      const token = data.token ?? data.access_token ?? "";
       const authUser: AuthUser = {
         id:    data.user?.id,
         name:  data.user?.name  ?? email.split("@")[0],
         email: data.user?.email ?? email,
-        token: data.token ?? data.access_token ?? "",
+        token,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
       await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: authUser.token, user: authUser }),
+        body: JSON.stringify({ token, user: authUser }),
       });
-      setUser(authUser);
+      setUser({ ...authUser, token: "__server__" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "ចូលគណនីមិនបានសំរេច");
     } finally {
@@ -156,19 +130,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.message ?? "ចុះឈ្មោះមិនបានសំរេច");
+      const token = data.token ?? data.access_token ?? "";
       const authUser: AuthUser = {
         id:    data.user?.id,
         name:  data.user?.name  ?? name,
         email: data.user?.email ?? email,
-        token: data.token ?? data.access_token ?? "",
+        token,
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(authUser));
       await fetch("/api/auth/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: authUser.token, user: authUser }),
+        body: JSON.stringify({ token, user: authUser }),
       });
-      setUser(authUser);
+      setUser({ ...authUser, token: "__server__" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "ចុះឈ្មោះមិនបានសំរេច");
     } finally {
@@ -179,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      if (user?.token) {
+      if (user && user.token !== "__server__") {
         await fetch(API.auth.logout, {
           method:  "POST",
           headers: {
@@ -190,7 +164,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
       }
     } catch {}
-    localStorage.removeItem(STORAGE_KEY);
     await fetch("/api/auth/session", { method: "DELETE" });
     setUser(null);
     setLoading(false);
@@ -199,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, router]);
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, login, register, logout, syncFromCookie }}>
+    <AuthContext.Provider value={{ user, loading, error, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

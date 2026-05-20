@@ -33,7 +33,7 @@ function getDeviceFingerprint(): string {
 }
 
 export default function LoginForm() {
-  const { syncFromCookie } = useAuth();
+  const { refreshUser } = useAuth();
   const [email,          setEmail]          = useState("");
   const [password,       setPassword]       = useState("");
   const [otp,            setOtp]            = useState("");
@@ -44,11 +44,9 @@ export default function LoginForm() {
   const [challengeToken, setChallengeToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const store = document.cookie.split(";").find(c => c.trim().startsWith("auth_user="));
-    if (store) {
-      const params = new URLSearchParams(window.location.search);
-      window.location.href = params.get("redirect") ?? "/";
-    }
+    fetch("/api/auth/session").then(r => r.json()).then(data => {
+      if (data) window.location.href = new URLSearchParams(window.location.search).get("redirect") ?? "/";
+    }).catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -59,7 +57,7 @@ export default function LoginForm() {
     if (requiresOtp && challengeToken) {
       const res = await verifyLoginCodeAction({ challenge_token: challengeToken, otp });
       if (!res.ok) { setError(res.message ?? "លេខកូដមិនត្រឹមត្រូវ ឬផុតកំណត់"); setLoading(false); return; }
-      syncFromCookie();
+      await refreshUser();
       window.location.href = new URLSearchParams(window.location.search).get("redirect") ?? "/";
       return;
     }
@@ -67,7 +65,7 @@ export default function LoginForm() {
     const res = await loginAction({ email, password, device_name: getDeviceName(), device_fingerprint: getDeviceFingerprint() });
     if (!res.ok) { setError(res.message ?? "ចូលគណនីមិនបានសំរេច"); setLoading(false); return; }
     if (res.data?.requires_otp) { setChallengeToken(res.data.challenge_token ?? null); setRequiresOtp(true); setLoading(false); return; }
-    syncFromCookie();
+    await refreshUser();
     window.location.href = new URLSearchParams(window.location.search).get("redirect") ?? "/";
   }
 

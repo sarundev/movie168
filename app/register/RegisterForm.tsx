@@ -42,11 +42,9 @@ export default function RegisterForm() {
   const [error,           setError]           = useState<string | null>(null);
 
   useEffect(() => {
-    const store = document.cookie.split(";").find(c => c.trim().startsWith("auth_user="));
-    if (store) {
-      const params = new URLSearchParams(window.location.search);
-      window.location.href = params.get("redirect") ?? "/";
-    }
+    fetch("/api/auth/session").then(r => r.json()).then(data => {
+      if (data) window.location.href = new URLSearchParams(window.location.search).get("redirect") ?? "/";
+    }).catch(() => {});
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {

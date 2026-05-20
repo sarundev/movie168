@@ -46,7 +46,7 @@ async function setAuthCookies(token: string, user: { id?: number; name: string; 
     path: "/",
   });
   store.set("auth_user", JSON.stringify({ id: user.id, name: user.name, email: user.email }), {
-    httpOnly: false,
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     maxAge: COOKIE_MAX_AGE,

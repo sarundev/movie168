@@ -10,11 +10,6 @@ const cookieOpts = {
   maxAge: 60 * 60 * 24 * 365,
 };
 
-const readableCookieOpts = {
-  ...cookieOpts,
-  httpOnly: false as const,
-};
-
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const error = request.nextUrl.searchParams.get("error");
@@ -55,9 +50,8 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL("/", request.url));
 
-    response.cookies.set("access_token", data.token, cookieOpts);
-    response.cookies.set("auth_user", JSON.stringify(data.user), readableCookieOpts);
-    response.cookies.set("auth_device", JSON.stringify(data.device), readableCookieOpts);
+    response.cookies.set("auth_token", data.token, cookieOpts);
+    response.cookies.set("auth_user", JSON.stringify(data.user), cookieOpts);
 
     return response;
   } catch {
