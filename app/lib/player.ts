@@ -4,6 +4,7 @@ const PLAYER_BASE =
 export const PLAYER_ORIGIN = new URL(PLAYER_BASE).origin;
 
 export function buildPlaybackUrl({
+  
   sessionToken,
   movieSlug,
   sourceId,

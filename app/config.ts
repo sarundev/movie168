@@ -39,6 +39,8 @@ export const API = {
     watchHistory: `${R}/me/watch-history`,
   },
 
+  movieStates: `${R}/me/movie-states`,
+
   filters: `${R}/movie-filters`,
 
   settings: {

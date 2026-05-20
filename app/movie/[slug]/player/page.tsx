@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fetchMovieDetail, canWatchMovie } from "../../../lib/api";
+import { fetchMovieDetail, fetchMovieState } from "../../../lib/api";
 import { getServerUser } from "../../../lib/server-auth";
 import { serverApi } from "../../../lib/server-api";
 import PlayerClient from "./PlayerClient";
@@ -17,8 +17,11 @@ export default async function PlayerPage({
   const user = await getServerUser();
 
   let movie;
+  let movieState = null;
   try {
-    movie = await fetchMovieDetail(slug, user?.token);
+    const detailPromise = fetchMovieDetail(slug, user?.token);
+    const statePromise = user?.token ? fetchMovieState(slug, user.token, true).catch(() => null) : Promise.resolve(null);
+    [movie, movieState] = await Promise.all([detailPromise, statePromise]);
   } catch {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4" style={{ background: "#000" }}>
@@ -39,11 +42,11 @@ export default async function PlayerPage({
     );
   }
 
-  const canWatch         = canWatchMovie(movie);
-  const requiresPurchase = movie.purchase?.requires_purchase ?? movie.requires_purchase ?? false;
+  const canWatch         = movieState ? movieState.can_watch : (movie.access_type === "free" && !!user);
+  const requiresPurchase = movieState ? movieState.requires_purchase : (movie.access_type !== "free");
   const sources          = movie.sources ?? [];
 
-  const sessionToken = movie.playback_session_token ?? null;
+  const sessionToken = movieState?.playback_session_token ?? null;
 
   // Record view when user actually reaches the player — most reliable tracking point
   if (canWatch && user) {

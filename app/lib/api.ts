@@ -8,7 +8,7 @@ export interface ApiMovieSource {
   label: string;
   quality: string;
   is_default: boolean;
-  can_watch: boolean;
+  can_watch?: boolean;
   embed_url?: string;
 }
 
@@ -57,6 +57,7 @@ export interface ApiMovie {
   can_watch?: boolean;
   requires_purchase?: boolean;
 
+  available_payment_methods?: string[];
   genres?: { id: number; name: string; slug?: string }[];
   casts?: { id: number; name: string; role?: string; profile_url?: string }[];
   trailer_url?: string;
@@ -294,12 +295,41 @@ export async function fetchTrendingMovies(): Promise<ApiMovie[]> {
   return Array.isArray(data) ? data : (data as { data: ApiMovie[] }).data ?? [];
 }
 
+export interface ApiMovieState {
+  id: number;
+  slug: string;
+  can_watch: boolean;
+  requires_purchase: boolean;
+  is_purchased: boolean;
+  is_favorited: boolean;
+  balance_price?: number;
+  credit_price?: number | null;
+  allow_credit_purchase?: boolean;
+  available_payment_methods?: string[];
+  price?: number | null;
+  currency?: string | null;
+  display_badge?: string;
+  playback_session_token?: string | null;
+  watch_denial_reason?: string | null;
+  watch_progress?: {
+    watched_seconds: number;
+    duration_seconds: number;
+    progress_percent: number;
+    is_completed: boolean;
+    last_watched_at?: string;
+  } | null;
+}
+
 export async function fetchMovieDetail(slug: string, token?: string): Promise<ApiMovie> {
-  const url = token
-    ? `${API.movies.detail(slug)}?include_state=true&include_playback=true`
-    : API.movies.detail(slug);
-  const data = await req<{ data: ApiMovie } | ApiMovie>(url, {}, token);
+  const data = await req<{ data: ApiMovie } | ApiMovie>(API.movies.detail(slug), {}, token);
   return (data as { data: ApiMovie }).data ?? (data as ApiMovie);
+}
+
+export async function fetchMovieState(slug: string, token: string, includePlayback = false): Promise<ApiMovieState | null> {
+  const params = new URLSearchParams({ slugs: slug });
+  if (includePlayback) params.set("include_playback", "true");
+  const data = await req<{ data: ApiMovieState[] }>(`${API.movieStates}?${params}`, {}, token);
+  return data.data?.[0] ?? null;
 }
 
 export async function fetchMoviePlayer(slug: string, token: string): Promise<{ url?: string }> {
@@ -427,7 +457,12 @@ export async function fetchTvShow(slug: string, token?: string): Promise<ApiTvSh
 
 export async function fetchMovieFilters(): Promise<ApiMovieFilters> {
   const data = await req<{ data: ApiMovieFilters }>(API.filters);
-  return data.data;
+  const result = data?.data ?? data as unknown as ApiMovieFilters;
+  return {
+    genres:    Array.isArray(result?.genres)    ? result.genres    : [],
+    countries: Array.isArray(result?.countries) ? result.countries : [],
+    qualities: Array.isArray(result?.qualities) ? result.qualities : [],
+  };
 }
 
 // ─── Settings ────────────────────────────────────────────────────────────────

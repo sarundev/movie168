@@ -31,8 +31,8 @@ export default function PlayerClient({
   const { user } = useAuth();
 
   const activeSource =
-    sources.find(s => s.is_default && s.can_watch) ??
-    sources.find(s => s.can_watch) ??
+    sources.find(s => s.is_default && (s.can_watch ?? true)) ??
+    sources.find(s => s.can_watch ?? true) ??
     null;
 
   const [selectedId, setSelectedId] = useState<number | null>(initialSourceId);
@@ -130,6 +130,7 @@ export default function PlayerClient({
       {/* Iframe */}
       <div className="relative w-full rounded-none sm:rounded-2xl overflow-hidden"
         style={{ aspectRatio: "16/9", background: "#111" }}>
+        
         {embedUrl ? (
           <iframe
             key={current?.id ?? embedUrl}
@@ -137,7 +138,7 @@ export default function PlayerClient({
             title={movieTitle}
             className="absolute inset-0 w-full h-full"
             allowFullScreen
-            allow="autoplay; fullscreen; picture-in-picture"
+            allow="autoplay; fullscreen; encrypted-media; picture-in-picture"
             style={{ border: "none" }}
           />
         ) : (
@@ -145,18 +146,18 @@ export default function PlayerClient({
             <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.5">
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
-            <p className="text-sm" style={{ color: "#555" }}>មិនទាន់មាន Session Token។</p>
+            <p className="text-sm" style={{ color: "#555" }}>មិនអាចចាក់វីដេអូបាន</p>
           </div>
         )}
       </div>
 
       {/* Source selector */}
-      {sources.filter(s => s.can_watch).length > 1 && (
+      {sources.filter(s => s.can_watch ?? true).length > 1 && (
         <div className="flex flex-wrap items-center gap-2 mt-4 px-4 sm:px-0">
           <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#555" }}>
-            Sources:
+            ប្រភព:
           </span>
-          {sources.filter(s => s.can_watch).map(s => (
+          {sources.filter(s => s.can_watch ?? true).map(s => (
             <button
               key={s.id}
               onClick={() => setSelectedId(s.id)}

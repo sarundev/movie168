@@ -3,7 +3,8 @@ import { cache, Suspense } from "react";
 import { notFound } from "next/navigation";
 
 import Link from "next/link";
-import { fetchMovieDetail, fetchComments, canWatchMovie, getMovieRating, type ApiMovie } from "../../lib/api";
+import Image from "next/image";
+import { fetchMovieDetail, fetchMovieState, fetchComments, getMovieRating, type ApiMovie } from "../../lib/api";
 import { getServerUser } from "../../lib/server-auth";
 import { buildPlaybackUrl } from "../../lib/player";
 import Navbar from "../../components/Navbar";
@@ -74,10 +75,11 @@ async function MovieDetailShell({ slug }: { slug: string }) {
   const token = user?.token ?? null;
 
   let movie;
+  let movieState = null;
   try {
-    movie = token
-      ? await fetchMovieDetail(slug, token)
-      : await getMovieMeta(slug);
+    const detailPromise = token ? fetchMovieDetail(slug, token) : getMovieMeta(slug);
+    const statePromise = token ? fetchMovieState(slug, token, true).catch(() => null) : Promise.resolve(null);
+    [movie, movieState] = await Promise.all([detailPromise, statePromise]);
   } catch {
     notFound();
   }
@@ -86,15 +88,14 @@ async function MovieDetailShell({ slug }: { slug: string }) {
 
   // Hero data
   const poster = movie.backdrop_url ?? movie.poster_url ?? movie.thumbnail_url;
-  const canWatch = canWatchMovie(movie);
-  const sessionToken = canWatch ? (movie.playback_session_token ?? null) : null;
-  const isPurchased = movie.purchase?.is_purchased ?? movie.is_purchased ?? false;
-  const requiresPurchaseFull = !isPurchased && (movie.purchase?.requires_purchase ?? movie.requires_purchase ?? false);
-  const paymentMethods = movie.purchase?.available_payment_methods ?? [];
+  const canWatch = movieState ? movieState.can_watch : (movie.access_type === "free");
+  const sessionToken = canWatch ? (movieState?.playback_session_token ?? null) : null;
+  const requiresPurchaseFull = movieState ? movieState.requires_purchase : (movie.access_type !== "free");
+  const paymentMethods = movieState?.available_payment_methods ?? movie.available_payment_methods ?? [];
   const canBuyCredit = paymentMethods.includes("credit");
   const canBuyBalance = paymentMethods.includes("balance");
-  const defaultSource = movie.sources?.find(s => s.is_default && s.can_watch)
-    ?? movie.sources?.find(s => s.can_watch);
+  const defaultSource = movie.sources?.find(s => s.is_default && (s.can_watch ?? true))
+    ?? movie.sources?.find(s => s.can_watch ?? true);
 
   const miniPoster = movie.poster_url ?? movie.thumbnail_url;
   const qColor = qualityBg[movie.quality ?? ""] ?? "#15803d";
@@ -121,12 +122,13 @@ async function MovieDetailShell({ slug }: { slug: string }) {
         <link rel="preload" as="image" href={poster} fetchPriority="high" />
         <div className="relative w-full mx-auto" style={{ maxWidth: "1350px", aspectRatio: "16/9" }}>
           {poster && (
-            <img
+            <Image
               src={poster}
               alt=""
-              fetchPriority="high"
-              loading="eager"
-              className="absolute inset-0 w-full h-full object-cover"
+              fill
+              priority
+              sizes="(max-width: 1350px) 100vw, 1350px"
+              className="absolute inset-0 object-cover"
               style={{ filter: "brightness(0.35)" }}
             />
           )}
@@ -183,12 +185,13 @@ async function MovieDetailShell({ slug }: { slug: string }) {
                 <div className="relative rounded-lg overflow-hidden shrink-0"
                   style={{ width: "90px", aspectRatio: "2/3", background: "#2a2a35" }}>
                   {miniPoster && (
-                    <img
+                    <Image
                       src={miniPoster}
                       alt={movie.title}
-                      className="absolute inset-0 w-full h-full object-cover"
+                      fill
+                      sizes="90px"
+                      className="absolute inset-0 object-cover"
                       loading="lazy"
-                      decoding="async"
                     />
                   )}
                   {movie.quality && (
@@ -349,7 +352,7 @@ async function MovieDetailShell({ slug }: { slug: string }) {
                     <div className="relative rounded-lg overflow-hidden"
                       style={{ width: "68px", height: "95px", background: "#2a2a35" }}>
                       {(m.poster_url ?? m.thumbnail_url) && (
-                        <img src={m.poster_url ?? m.thumbnail_url} alt={m.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" />
+                        <Image src={m.poster_url ?? m.thumbnail_url ?? ""} alt={m.title} fill sizes="68px" className="absolute inset-0 object-cover" loading="lazy" />
                       )}
                     </div>
                     <p className="text-[10px] text-center leading-snug line-clamp-2 group-hover:text-amber-400 transition-colors"
@@ -365,7 +368,7 @@ async function MovieDetailShell({ slug }: { slug: string }) {
                     <div className="relative rounded-lg overflow-hidden shrink-0"
                       style={{ width: "56px", height: "78px", background: "#2a2a35" }}>
                       {(m.poster_url ?? m.thumbnail_url) && (
-                        <img src={m.poster_url ?? m.thumbnail_url} alt={m.title} className="absolute inset-0 w-full h-full object-cover" loading="lazy" decoding="async" />
+                        <Image src={m.poster_url ?? m.thumbnail_url ?? ""} alt={m.title} fill sizes="56px" className="absolute inset-0 object-cover" loading="lazy" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">

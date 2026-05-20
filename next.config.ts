@@ -5,10 +5,6 @@ const nextConfig: NextConfig = {
 
   compress: true,
 
-  experimental: {
-    optimizePackageImports: ["next/image"],
-  },
-
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "image.tmdb.org" },
@@ -17,6 +13,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.cloudfront.net" },
       { protocol: "https", hostname: "*.digitaloceanspaces.com" },
       { protocol: "https", hostname: "*.cdn.digitaloceanspaces.com" },
+      { protocol: "https", hostname: "admin168kh.com" },
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 86400,

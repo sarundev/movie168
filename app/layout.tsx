@@ -30,10 +30,11 @@ export default function RootLayout({
   return (
     <html lang="km" className={`${geistSans.variable} ${kantumruy.variable} h-full`}>
       <head>
-        <link rel="preconnect" href="https://streaming-backend-hldchiyj.on-forge.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://admin168kh.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://image.tmdb.org" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://cdn-mdia.sgp1.digitaloceanspaces.com" crossOrigin="anonymous" />
-        <link rel="dns-prefetch" href="https://streaming-backend-hldchiyj.on-forge.com" />
+        <link rel="preconnect" href="https://streaming-iframe-pss7.vercel.app" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://admin168kh.com" />
         <link rel="dns-prefetch" href="https://image.tmdb.org" />
         <link rel="dns-prefetch" href="https://cdn-mdia.sgp1.digitaloceanspaces.com" />
       </head>
