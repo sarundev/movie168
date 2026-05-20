@@ -12,7 +12,7 @@ export default function VerifyOtpForm() {
   const email          = params.get("email") ?? "";
   const nextUrl        = params.get("next") ?? "/";
 
-  const { syncFromCookie } = useAuth();
+  const { refreshUser } = useAuth();
 
   const [code,      setCode]      = useState("");
   const [loading,   setLoading]   = useState(false);
@@ -44,7 +44,7 @@ export default function VerifyOtpForm() {
       return;
     }
 
-    syncFromCookie();
+    await refreshUser();
     window.location.href = nextUrl;
   }
 
