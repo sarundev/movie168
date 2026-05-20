@@ -42,6 +42,7 @@ export interface AuthUser {
   name: string;
   email: string;
   token: string;
+  avatar?: string;
 }
 
 interface AuthContextValue {
@@ -94,9 +95,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error(data?.message ?? "ចូលគណនីមិនបានសំរេច");
       const token = data.token ?? data.access_token ?? "";
       const authUser: AuthUser = {
-        id:    data.user?.id,
-        name:  data.user?.name  ?? email.split("@")[0],
-        email: data.user?.email ?? email,
+        id:     data.user?.id,
+        name:   data.user?.name   ?? email.split("@")[0],
+        email:  data.user?.email  ?? email,
+        avatar: data.user?.avatar ?? data.user?.avatar_url ?? data.user?.picture ?? undefined,
         token,
       };
       await fetch("/api/auth/session", {
@@ -132,9 +134,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!res.ok) throw new Error(data?.message ?? "ចុះឈ្មោះមិនបានសំរេច");
       const token = data.token ?? data.access_token ?? "";
       const authUser: AuthUser = {
-        id:    data.user?.id,
-        name:  data.user?.name  ?? name,
-        email: data.user?.email ?? email,
+        id:     data.user?.id,
+        name:   data.user?.name   ?? name,
+        email:  data.user?.email  ?? email,
+        avatar: data.user?.avatar ?? data.user?.avatar_url ?? data.user?.picture ?? undefined,
         token,
       };
       await fetch("/api/auth/session", {

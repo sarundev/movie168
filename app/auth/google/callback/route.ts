@@ -50,8 +50,16 @@ export async function GET(request: NextRequest) {
 
     const response = NextResponse.redirect(new URL("/", request.url));
 
+    const avatar = data.user?.avatar ?? data.user?.avatar_url ?? data.user?.picture ?? undefined;
+    const userPayload: Record<string, unknown> = {
+      id:    data.user?.id,
+      name:  data.user?.name,
+      email: data.user?.email,
+    };
+    if (avatar) userPayload.avatar = avatar;
+
     response.cookies.set("auth_token", data.token, cookieOpts);
-    response.cookies.set("auth_user", JSON.stringify(data.user), cookieOpts);
+    response.cookies.set("auth_user", JSON.stringify(userPayload), cookieOpts);
 
     return response;
   } catch {

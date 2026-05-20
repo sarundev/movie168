@@ -29,12 +29,14 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const { token, user } = await req.json() as {
     token: string;
-    user: { id?: number; name: string; email: string };
+    user: { id?: number; name: string; email: string; avatar?: string };
   };
 
   const res = NextResponse.json({ ok: true });
   res.cookies.set(TOKEN_COOKIE, token, cookieOpts);
-  res.cookies.set(USER_COOKIE, JSON.stringify({ id: user.id, name: user.name, email: user.email }), cookieOpts);
+  const userPayload: Record<string, unknown> = { id: user.id, name: user.name, email: user.email };
+  if (user.avatar) userPayload.avatar = user.avatar;
+  res.cookies.set(USER_COOKIE, JSON.stringify(userPayload), cookieOpts);
   return res;
 }
 

@@ -265,12 +265,14 @@ export default function Navbar({ initialGenres, initialCountries }: NavbarProps 
                   className="flex items-center gap-2 px-2 py-1 rounded-lg transition-colors"
                   // style={{ background: "rgba(255,255,255,0.04)", border: "1px solid #2e2e2e" }}
                 >
-                  {/* Avatar circle with initials */}
+                  {/* Avatar circle */}
                   <div
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0"
-                    style={{ background: "linear-gradient(135deg,#c9a835,#8b6914)", color: "#0d0d12" }}
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black shrink-0 overflow-hidden"
+                    style={user.avatar ? {} : { background: "linear-gradient(135deg,#c9a835,#8b6914)", color: "#0d0d12" }}
                   >
-                    {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    {user.avatar
+                      ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      : user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
                   {/* <span className="text-xs font-semibold max-w-20 truncate" style={{ color: "#ddd" }}>
                     {user.name}
@@ -415,10 +417,12 @@ export default function Navbar({ initialGenres, initialCountries }: NavbarProps 
                 {/* User info row */}
                 <div className="flex items-center gap-3 px-3 py-2.5 mb-1">
                   <div
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0"
-                    style={{ background: "linear-gradient(135deg,#c9a835,#8b6914)", color: "#0d0d12" }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-black shrink-0 overflow-hidden"
+                    style={user.avatar ? {} : { background: "linear-gradient(135deg,#c9a835,#8b6914)", color: "#0d0d12" }}
                   >
-                    {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    {user.avatar
+                      ? <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      : user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold truncate" style={{ color: "#ddd" }}>{user.name}</p>
