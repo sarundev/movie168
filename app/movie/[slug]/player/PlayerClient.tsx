@@ -124,9 +124,11 @@ export default function PlayerClient({
       }
     };
   }, [sessionToken, user, movieId]);
+  console.log({embedUrl})
 
   return (
     <>
+
       {/* Iframe */}
       <div className="relative w-full rounded-none sm:rounded-2xl overflow-hidden"
         style={{ aspectRatio: "16/9", background: "#111" }}>

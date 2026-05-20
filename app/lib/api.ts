@@ -68,6 +68,13 @@ export interface ApiMovie {
   related_movies?: ApiMovie[];
   playback_session_token?: string;
 
+  // State-merged fields (populated by applyMovieState)
+  balance_price?: number;
+  credit_price?: number | null;
+  allow_credit_purchase?: boolean;
+  display_badge?: string;
+  watch_denial_reason?: string | null;
+
   // fallback fields
   badge?: string;
   gradient?: string;
@@ -89,6 +96,39 @@ export function canWatchMovie(m: ApiMovie): boolean {
   const isPurchased = m.purchase?.is_purchased ?? m.is_purchased ?? false;
   if (isPurchased) return true;
   return m.purchase?.can_watch ?? m.can_watch ?? true;
+}
+
+// Merge a MovieState response into its movie so callers read one object
+export function applyMovieState(movie: ApiMovie, state?: ApiMovieState | null): ApiMovie {
+  if (!state) return movie;
+  return {
+    ...movie,
+    can_watch: state.can_watch,
+    requires_purchase: state.requires_purchase,
+    is_purchased: state.is_purchased,
+    price: state.price ?? movie.price,
+    balance_price: state.balance_price ?? movie.balance_price,
+    credit_price: state.credit_price ?? movie.credit_price,
+    allow_credit_purchase: state.allow_credit_purchase ?? movie.allow_credit_purchase,
+    available_payment_methods: state.available_payment_methods ?? movie.available_payment_methods,
+    currency: state.currency ?? movie.currency,
+    display_badge: state.display_badge ?? movie.display_badge,
+    playback_session_token: state.playback_session_token ?? undefined,
+    watch_denial_reason: state.watch_denial_reason,
+    purchase: {
+      ...movie.purchase,
+      can_watch: state.can_watch,
+      requires_purchase: state.requires_purchase,
+      is_purchased: state.is_purchased,
+      available_payment_methods:
+        state.available_payment_methods ?? movie.purchase?.available_payment_methods,
+    },
+    user_state: {
+      ...movie.user_state,
+      is_favorited: state.is_favorited,
+      watch_progress: state.watch_progress,
+    },
+  };
 }
 
 export interface ApiComment {
@@ -327,13 +367,26 @@ export async function fetchMovieDetail(slug: string, token?: string): Promise<Ap
 
 export async function fetchMovieState(slug: string, token: string, includePlayback = false): Promise<ApiMovieState | null> {
   const params = new URLSearchParams({ slugs: slug });
-  if (includePlayback) params.set("include_playback", "true");
-  const data = await req<{ data: ApiMovieState[] }>(`${API.movieStates}?${params}`, {}, token);
-  return data.data?.[0] ?? null;
+  if (includePlayback) params.set("include_playback", "1");
+  const data = await req<{ data: ApiMovieState[] | ApiMovieState } | ApiMovieState[]>(
+    `${API.movieStates}?${params}`, {}, token,
+  );
+  if (Array.isArray(data)) return data[0] ?? null;
+  if (Array.isArray(data.data)) return (data.data as ApiMovieState[])[0] ?? null;
+  if (data.data && typeof data.data === "object") return data.data as ApiMovieState;
+  return null;
 }
 
-export async function fetchMoviePlayer(slug: string, token: string): Promise<{ url?: string }> {
-  return req<{ url?: string }>(API.movies.player(slug), {}, token);
+// Mirrors the TV-show episode-player endpoint — returns access state + playback_session_token
+export async function fetchMoviePlayer(slug: string, token: string): Promise<ApiMovieState | null> {
+  try {
+    const data = await req<{ data: ApiMovieState } | ApiMovieState>(
+      API.movies.player(slug), {}, token,
+    );
+    return (data as { data: ApiMovieState }).data ?? (data as ApiMovieState);
+  } catch {
+    return null;
+  }
 }
 
 export async function fetchComments(movieId: number | string): Promise<ApiComment[]> {

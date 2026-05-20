@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import Link from "next/link";
 import Image from "next/image";
-import { fetchMovieDetail, fetchMovieState, fetchComments, getMovieRating, type ApiMovie } from "../../lib/api";
+import { fetchMovieDetail, fetchMovieState, fetchComments, getMovieRating, applyMovieState, type ApiMovie } from "../../lib/api";
 import { getServerUser } from "../../lib/server-auth";
 import { buildPlaybackUrl } from "../../lib/player";
 import Navbar from "../../components/Navbar";
@@ -75,12 +75,17 @@ async function MovieDetailShell({ slug }: { slug: string }) {
   const token = user?.token ?? null;
 
   let movie;
-  let movieState = null;
+  let hasState = false;
   try {
-    const detailPromise = token ? fetchMovieDetail(slug, token) : getMovieMeta(slug);
-    const statePromise = token ? fetchMovieState(slug, token, true).catch(() => null) : Promise.resolve(null);
-    [movie, movieState] = await Promise.all([detailPromise, statePromise]);
-  } catch {
+    const [rawMovie, movieState] = await Promise.all([
+      token ? fetchMovieDetail(slug, token) : getMovieMeta(slug),
+      token ? fetchMovieState(slug, token, true) : Promise.resolve(null),
+    ]);
+    hasState = !!movieState;
+    movie = applyMovieState(rawMovie, movieState);
+
+  } catch(e) {
+    console.log({e})
     notFound();
   }
 
@@ -88,10 +93,10 @@ async function MovieDetailShell({ slug }: { slug: string }) {
 
   // Hero data
   const poster = movie.backdrop_url ?? movie.poster_url ?? movie.thumbnail_url;
-  const canWatch = movieState ? movieState.can_watch : (movie.access_type === "free");
-  const sessionToken = canWatch ? (movieState?.playback_session_token ?? null) : null;
-  const requiresPurchaseFull = movieState ? movieState.requires_purchase : (movie.access_type !== "free");
-  const paymentMethods = movieState?.available_payment_methods ?? movie.available_payment_methods ?? [];
+  const canWatch = hasState ? (movie.can_watch ?? false) : (movie.access_type === "free");
+  const sessionToken = canWatch ? (movie.playback_session_token ?? null) : null;
+  const requiresPurchaseFull = movie.requires_purchase ?? (movie.access_type !== "free");
+  const paymentMethods = movie.available_payment_methods ?? [];
   const canBuyCredit = paymentMethods.includes("credit");
   const canBuyBalance = paymentMethods.includes("balance");
   const defaultSource = movie.sources?.find(s => s.is_default && (s.can_watch ?? true))
